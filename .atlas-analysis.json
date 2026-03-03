@@ -1,0 +1,270 @@
+{
+  "projectType": "saas",
+  "projectName": "Cmux",
+  "projectDescription": "Ghostty-based macOS terminal with vertical tabs and notifications for AI coding agents",
+  "theme": "palm",
+  "primaryColor": "#29a9f9",
+  "lightColor": "#7986f4",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/workspaces",
+              "features/notifications",
+              "features/browser",
+              "features/vertical-tabs",
+              "features/split-panes"
+            ]
+          },
+          {
+            "group": "Keyboard Shortcuts",
+            "pages": [
+              "keyboard-shortcuts/workspaces",
+              "keyboard-shortcuts/surfaces",
+              "keyboard-shortcuts/splits",
+              "keyboard-shortcuts/browser",
+              "keyboard-shortcuts/notifications"
+            ]
+          },
+          {
+            "group": "Integrations",
+            "pages": [
+              "integrations/overview",
+              "integrations/claude-code",
+              "integrations/opencode",
+              "integrations/codex"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/ghostty-config",
+              "configuration/socket-api",
+              "configuration/session-restore"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "CLI Reference",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "cli/overview",
+              "cli/authentication"
+            ]
+          },
+          {
+            "group": "Window Management",
+            "pages": [
+              "cli/windows/list",
+              "cli/windows/create",
+              "cli/windows/focus",
+              "cli/windows/close"
+            ]
+          },
+          {
+            "group": "Workspace Management",
+            "pages": [
+              "cli/workspaces/list",
+              "cli/workspaces/create",
+              "cli/workspaces/select",
+              "cli/workspaces/rename",
+              "cli/workspaces/close"
+            ]
+          },
+          {
+            "group": "Pane Management",
+            "pages": [
+              "cli/panes/list",
+              "cli/panes/create",
+              "cli/panes/focus",
+              "cli/panes/split"
+            ]
+          },
+          {
+            "group": "Surface Management",
+            "pages": [
+              "cli/surfaces/list",
+              "cli/surfaces/create",
+              "cli/surfaces/focus",
+              "cli/surfaces/close",
+              "cli/surfaces/move",
+              "cli/surfaces/reorder"
+            ]
+          },
+          {
+            "group": "Browser Control",
+            "pages": [
+              "cli/browser/overview",
+              "cli/browser/navigation",
+              "cli/browser/interaction",
+              "cli/browser/automation",
+              "cli/browser/snapshot"
+            ]
+          },
+          {
+            "group": "Notifications",
+            "pages": [
+              "cli/notifications/send",
+              "cli/notifications/list",
+              "cli/notifications/clear"
+            ]
+          },
+          {
+            "group": "System Commands",
+            "pages": [
+              "cli/system/identify",
+              "cli/system/capabilities",
+              "cli/system/tree"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "System",
+            "pages": [
+              "api/system/ping",
+              "api/system/identify",
+              "api/system/capabilities"
+            ]
+          },
+          {
+            "group": "Window",
+            "pages": [
+              "api/window/list",
+              "api/window/create",
+              "api/window/focus",
+              "api/window/close"
+            ]
+          },
+          {
+            "group": "Workspace",
+            "pages": [
+              "api/workspace/list",
+              "api/workspace/create",
+              "api/workspace/select",
+              "api/workspace/rename",
+              "api/workspace/close",
+              "api/workspace/move"
+            ]
+          },
+          {
+            "group": "Pane",
+            "pages": [
+              "api/pane/list",
+              "api/pane/create",
+              "api/pane/focus",
+              "api/pane/surfaces"
+            ]
+          },
+          {
+            "group": "Surface",
+            "pages": [
+              "api/surface/list",
+              "api/surface/create",
+              "api/surface/focus",
+              "api/surface/close",
+              "api/surface/split",
+              "api/surface/move",
+              "api/surface/reorder",
+              "api/surface/send-text",
+              "api/surface/send-key",
+              "api/surface/read-text"
+            ]
+          },
+          {
+            "group": "Browser",
+            "pages": [
+              "api/browser/navigate",
+              "api/browser/eval",
+              "api/browser/snapshot",
+              "api/browser/click",
+              "api/browser/type",
+              "api/browser/wait",
+              "api/browser/screenshot"
+            ]
+          },
+          {
+            "group": "Notifications",
+            "pages": [
+              "api/notifications/send",
+              "api/notifications/list",
+              "api/notifications/clear",
+              "api/notifications/mark-read"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Notification rings and panel for AI coding agents",
+    "Vertical sidebar with git branch, PR status, and working directory",
+    "In-app browser with scriptable API from agent-browser",
+    "CLI and socket API for automation",
+    "Native macOS app built with Swift and AppKit",
+    "Ghostty compatible terminal with GPU acceleration",
+    "Workspaces, split panes, and horizontal/vertical tabs",
+    "Session restore for layouts and working directories"
+  ],
+  "publicApiSurface": [
+    "cmux notify",
+    "cmux new-workspace",
+    "cmux new-split",
+    "cmux new-pane",
+    "cmux new-surface",
+    "cmux list-workspaces",
+    "cmux list-panes",
+    "cmux list-panels",
+    "cmux focus-pane",
+    "cmux focus-panel",
+    "cmux browser navigate",
+    "cmux browser snapshot",
+    "cmux browser eval",
+    "cmux browser click",
+    "cmux browser type",
+    "cmux identify",
+    "cmux capabilities",
+    "cmux tree",
+    "system.identify",
+    "system.capabilities",
+    "workspace.list",
+    "workspace.create",
+    "workspace.select",
+    "pane.list",
+    "pane.create",
+    "pane.focus",
+    "surface.list",
+    "surface.create",
+    "surface.focus",
+    "surface.split",
+    "surface.move",
+    "surface.reorder",
+    "surface.send_text",
+    "surface.read_text",
+    "browser.navigate",
+    "browser.snapshot",
+    "browser.eval",
+    "browser.click",
+    "browser.type",
+    "browser.wait"
+  ]
+}
