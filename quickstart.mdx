@@ -1,0 +1,217 @@
+---
+title: "Quickstart"
+description: "Get up and running with cmux in 5 minutes"
+---
+
+This guide will get you from zero to a working cmux setup with notifications for AI coding agents.
+
+## Prerequisites
+
+- macOS 13 (Ventura) or later
+- An AI coding agent (Claude Code, OpenCode, or Codex)
+
+## Install cmux
+
+<Steps>
+  <Step title="Download and install">
+    **Option 1: DMG (recommended)**
+    
+    Download the latest release:
+    
+    <a href="https://github.com/manaflow-ai/cmux/releases/latest/download/cmux-macos.dmg" className="inline-flex items-center px-4 py-2 rounded-lg bg-[#29a9f9] text-white font-semibold hover:bg-[#2090d9] transition-colors no-underline">
+      Download cmux for macOS
+    </a>
+    
+    Open the DMG and drag cmux to your Applications folder. Cmux auto-updates via Sparkle, so you only need to download once.
+    
+    **Option 2: Homebrew**
+    
+    ```bash
+    brew tap manaflow-ai/cmux
+    brew install --cask cmux
+    ```
+    
+    On first launch, macOS may ask you to confirm opening an app from an identified developer. Click **Open** to proceed.
+  </Step>
+
+  <Step title="Launch cmux">
+    Open cmux from your Applications folder or via Spotlight (`⌘ Space`, type "cmux").
+    
+    You'll see a single terminal window with a sidebar on the left. The sidebar shows your workspaces (like tabs in a browser).
+  </Step>
+
+  <Step title="Create your first workspace">
+    Create a new workspace with `⌘ N` or from the CLI:
+    
+    ```bash
+    cmux new-workspace --cwd ~/projects/myproject
+    ```
+    
+    Workspaces appear as vertical tabs in the sidebar. Each workspace shows:
+    - Git branch (if in a git repo)
+    - Working directory
+    - Pull request status (if linked)
+    - Listening ports
+    - Latest notification text
+  </Step>
+
+  <Step title="Test notifications">
+    Send a test notification from your terminal:
+    
+    ```bash
+    cmux notify --title "Test" --body "Cmux is working!"
+    ```
+    
+    You should see:
+    - A blue ring appear around your terminal pane
+    - The workspace tab light up in the sidebar
+    - A macOS system notification (if enabled)
+    - The notification appear in the notification panel (press `⌘ I`)
+  </Step>
+
+  <Step title="Jump to unread notifications">
+    Press `⌘ Shift U` to jump to the latest unread notification.
+    
+    When you focus a pane with a notification, it automatically marks as read and the blue ring disappears.
+    
+    This is the core workflow: agents send notifications when they need input, you press `⌘ Shift U` to jump to them.
+  </Step>
+</Steps>
+
+## Set up your AI agent
+
+Now configure your coding agent to send notifications when it needs input.
+
+<Tabs>
+  <Tab title="Claude Code">
+    Add to `~/.claude/settings.json`:
+    
+    ```json
+    {
+      "hooks": {
+        "Notification": [
+          {
+            "matcher": "idle_prompt",
+            "hooks": [
+              {
+                "type": "command",
+                "command": "command -v cmux &>/dev/null && cmux notify --title 'Claude Code' --body 'Waiting for input' || osascript -e 'display notification \"Waiting for input\" with title \"Claude Code\"'"
+              }
+            ]
+          },
+          {
+            "matcher": "permission_prompt",
+            "hooks": [
+              {
+                "type": "command",
+                "command": "command -v cmux &>/dev/null && cmux notify --title 'Claude Code' --subtitle 'Permission' --body 'Approval needed' || osascript -e 'display notification \"Approval needed\" with title \"Claude Code\"'"
+              }
+            ]
+          }
+        ]
+      }
+    }
+    ```
+    
+    Now when Claude needs input, your workspace tab will light up and you'll see a blue ring around the pane.
+  </Tab>
+
+  <Tab title="OpenCode">
+    Create `.opencode/plugins/cmux-notify.js`:
+    
+    ```javascript
+    export const CmuxNotificationPlugin = async ({ $, }) => {
+      const notify = async (title, body) => {
+        try {
+          await $`command -v cmux && cmux notify --title ${title} --body ${body}`;
+        } catch {
+          await $`osascript -e ${"display notification \"" + body + "\" with title \"" + title + "\""}`;
+        }
+      };
+
+      return {
+        event: async ({ event }) => {
+          if (event.type === "session.idle") {
+            await notify("OpenCode", "Session idle");
+          }
+        },
+      };
+    };
+    ```
+  </Tab>
+
+  <Tab title="Codex">
+    Add to `~/.codex/config.toml`:
+    
+    ```toml
+    notify = ["bash", "-c", "command -v cmux &>/dev/null && cmux notify --title Codex --body \"$(echo $1 | jq -r '.\"last-assistant-message\" // \"Turn complete\"' 2>/dev/null | head -c 100)\" || osascript -e 'display notification \"Turn complete\" with title \"Codex\"'", "--"]
+    ```
+    
+    Or create `~/.local/bin/codex-notify.sh`:
+    
+    ```bash
+    #!/bin/bash
+    MSG=$(echo "$1" | jq -r '."last-assistant-message" // "Turn complete"' 2>/dev/null | head -c 100)
+    command -v cmux &>/dev/null && cmux notify --title "Codex" --body "$MSG" || osascript -e "display notification \"$MSG\" with title \"Codex\""
+    ```
+    
+    Then: `chmod +x ~/.local/bin/codex-notify.sh` and set `notify = ["bash", "~/.local/bin/codex-notify.sh"]` in your config.
+  </Tab>
+</Tabs>
+
+## Try the workflow
+
+1. **Start a coding session** - Launch Claude Code, OpenCode, or Codex in a cmux workspace
+2. **Switch to another workspace** - Press `⌘ N` to create a new workspace and work on something else
+3. **Wait for the agent** - When your agent finishes or needs input, its workspace tab will light up
+4. **Jump back** - Press `⌘ Shift U` to jump to the latest unread notification
+5. **Respond to the agent** - The notification is marked as read, and you can continue the session
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Core features" icon="rocket" href="/features/workspaces">
+    Explore workspaces, split panes, and the in-app browser
+  </Card>
+  <Card title="Keyboard shortcuts" icon="keyboard" href="/keyboard-shortcuts/workspaces">
+    Master cmux with keyboard-first navigation
+  </Card>
+  <Card title="CLI reference" icon="terminal" href="/cli/overview">
+    Automate cmux with the CLI and socket API
+  </Card>
+  <Card title="Configuration" icon="gear" href="/configuration/ghostty-config">
+    Customize Ghostty settings, themes, and fonts
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<Accordion title="Notifications aren't working">
+  Make sure the `cmux` CLI is in your PATH:
+  
+  ```bash
+  which cmux
+  ```
+  
+  If it returns nothing, add cmux to your PATH or use the full path in your agent config:
+  
+  ```bash
+  /Applications/cmux.app/Contents/MacOS/cmux notify --title "Test"
+  ```
+</Accordion>
+
+<Accordion title="Blue rings aren't appearing">
+  Check that your terminal is actually sending the notification. Run this directly in your cmux terminal:
+  
+  ```bash
+  cmux notify --title "Debug" --body "Testing notification"
+  ```
+  
+  Then press `⌘ I` to open the notification panel and verify it appears.
+</Accordion>
+
+<Accordion title="Cmd+Shift+U doesn't jump to notifications">
+  Make sure you have unread notifications. The sidebar shows notification count and text for each workspace.
+  
+  If you've already focused the pane with the notification, it's marked as read. Send a new notification from another workspace to test.
+</Accordion>
