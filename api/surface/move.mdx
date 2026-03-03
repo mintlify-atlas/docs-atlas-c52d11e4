@@ -1,0 +1,191 @@
+---
+title: surface.move
+description: Move a surface to a different location
+---
+
+Moves a surface to a different pane, workspace, or window. The surface's UUID remains stable across moves.
+
+## Method
+
+```
+surface.move
+```
+
+## Parameters
+
+<ParamField path="surface_id" type="string" required>
+  The UUID or reference of the surface to move
+</ParamField>
+
+<ParamField path="pane_id" type="string">
+  The UUID or reference of the destination pane
+</ParamField>
+
+<ParamField path="workspace_id" type="string">
+  The UUID or reference of the destination workspace
+</ParamField>
+
+<ParamField path="window_id" type="string">
+  The UUID or reference of the destination window
+</ParamField>
+
+<ParamField path="before_surface_id" type="string">
+  Place the surface before this surface (anchor-based positioning)
+</ParamField>
+
+<ParamField path="after_surface_id" type="string">
+  Place the surface after this surface (anchor-based positioning)
+</ParamField>
+
+<ParamField path="index" type="number">
+  The 0-based index position in the destination pane
+</ParamField>
+
+<ParamField path="focus" type="boolean" default="true">
+  Whether to focus the surface after moving
+</ParamField>
+
+## Positioning
+
+You can specify the destination using:
+
+1. **Pane ID**: Move to a specific pane
+2. **Workspace ID**: Move to the focused pane in a workspace
+3. **Window ID**: Move to the focused pane in the selected workspace of a window
+4. **Anchor surface**: Position relative to another surface using `before_surface_id` or `after_surface_id`
+
+Optionally combine with `index` for explicit positioning within the destination pane.
+
+## Response
+
+Returns an object confirming the move operation:
+
+<ResponseField name="surface_id" type="string">
+  The UUID of the moved surface (remains unchanged)
+</ResponseField>
+
+<ResponseField name="surface_ref" type="string">
+  The human-readable reference for the surface
+</ResponseField>
+
+<ResponseField name="pane_id" type="string">
+  The UUID of the destination pane
+</ResponseField>
+
+<ResponseField name="pane_ref" type="string">
+  The human-readable reference for the pane
+</ResponseField>
+
+<ResponseField name="workspace_id" type="string">
+  The UUID of the destination workspace
+</ResponseField>
+
+<ResponseField name="workspace_ref" type="string">
+  The human-readable reference for the workspace
+</ResponseField>
+
+<ResponseField name="window_id" type="string">
+  The UUID of the destination window
+</ResponseField>
+
+<ResponseField name="window_ref" type="string">
+  The human-readable reference for the window
+</ResponseField>
+
+## Example
+
+<CodeGroup>
+```json Move to Pane
+{
+  "id": "1",
+  "method": "surface.move",
+  "params": {
+    "surface_id": "surface:1",
+    "pane_id": "pane:2"
+  }
+}
+```
+
+```json Move to Workspace
+{
+  "id": "2",
+  "method": "surface.move",
+  "params": {
+    "surface_id": "770e8400-e29b-41d4-a716-446655440000",
+    "workspace_id": "workspace:2"
+  }
+}
+```
+
+```json Move with Anchor
+{
+  "id": "3",
+  "method": "surface.move",
+  "params": {
+    "surface_id": "surface:1",
+    "after_surface_id": "surface:3"
+  }
+}
+```
+
+```json Response
+{
+  "ok": true,
+  "result": {
+    "surface_id": "770e8400-e29b-41d4-a716-446655440000",
+    "surface_ref": "surface:1",
+    "pane_id": "bb0e8400-e29b-41d4-a716-446655440000",
+    "pane_ref": "pane:2",
+    "workspace_id": "cc0e8400-e29b-41d4-a716-446655440000",
+    "workspace_ref": "workspace:2",
+    "window_id": "660e8400-e29b-41d4-a716-446655440000",
+    "window_ref": "window:1"
+  }
+}
+```
+</CodeGroup>
+
+## CLI Usage
+
+```bash
+# Move to different pane
+cmux move-surface --surface surface:1 --pane pane:2
+
+# Move to different workspace
+cmux move-surface --surface surface:1 --workspace workspace:2
+
+# Move and position after another surface
+cmux move-surface --surface surface:1 --after surface:3
+```
+
+## Errors
+
+<ResponseField name="not_found" type="error">
+  The specified surface, pane, workspace, or anchor surface does not exist
+</ResponseField>
+
+<ResponseField name="invalid_params" type="error">
+  Invalid parameters or conflicting anchor specifications
+</ResponseField>
+
+## Surface ID Stability
+
+**Important**: The `surface_id` (UUID) remains stable when a surface is moved. This means:
+
+- The same surface UUID can be used to reference the surface after moving
+- Terminal state, scrollback, and process persist across moves
+- Only the surface's location changes, not its identity
+- Surface references (`surface:N`) may change, but UUIDs do not
+
+## Notes
+
+- Moving a surface across workspaces preserves all terminal state
+- If the destination pane doesn't exist, an error is returned
+- Specify at most one of `before_surface_id` or `after_surface_id`
+- The source and destination can be in different windows
+
+## See Also
+
+- [surface.reorder](/api/surface/reorder) - Reorder within the same pane
+- [workspace.move](/api/workspace/move) - Move entire workspace
+- [pane.list](/api/pane/list) - List available panes

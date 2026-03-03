@@ -1,0 +1,398 @@
+---
+title: "notification.list"
+description: "Retrieve all notifications with read status and metadata"
+---
+
+The `notification.list` method retrieves all notifications currently stored in cmux, including their read status, timestamps, and associated workspace/surface information.
+
+## Method
+
+```json
+{
+  "id": "list-1",
+  "method": "notification.list",
+  "params": {}
+}
+```
+
+## Parameters
+
+This method takes no parameters.
+
+## Response
+
+Returns an array of all notification objects:
+
+```json
+{
+  "ok": true,
+  "result": {
+    "notifications": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "workspace_id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+        "surface_id": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+        "is_read": false,
+        "title": "Build Complete",
+        "subtitle": "Success",
+        "body": "All tests passed"
+      },
+      {
+        "id": "660f9511-f3ac-52e5-b827-557766551111",
+        "workspace_id": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+        "surface_id": null,
+        "is_read": true,
+        "title": "Deploy Complete",
+        "subtitle": "Production",
+        "body": "Version 1.2.3 deployed successfully"
+      }
+    ]
+  }
+}
+```
+
+## Response Fields
+
+<ResponseField name="notifications" type="array" required>
+  Array of notification objects, ordered by creation time (newest first)
+</ResponseField>
+
+### Notification Object
+
+Each notification in the array contains:
+
+<ResponseField name="id" type="string" required>
+  Unique notification identifier (UUID)
+</ResponseField>
+
+<ResponseField name="workspace_id" type="string" required>
+  UUID of the workspace associated with this notification
+</ResponseField>
+
+<ResponseField name="surface_id" type="string | null" required>
+  UUID of the surface/panel associated with this notification, or `null` if none
+</ResponseField>
+
+<ResponseField name="is_read" type="boolean" required>
+  Whether the notification has been marked as read. Automatically set to `true` when the associated surface is focused.
+</ResponseField>
+
+<ResponseField name="title" type="string" required>
+  Notification title text
+</ResponseField>
+
+<ResponseField name="subtitle" type="string" required>
+  Notification subtitle (may be empty string)
+</ResponseField>
+
+<ResponseField name="body" type="string" required>
+  Notification body text content (may be empty string)
+</ResponseField>
+
+## isRead Field Behavior
+
+The `is_read` field indicates whether a notification has been viewed:
+
+### Automatic Read Marking
+
+Notifications are automatically marked as read when:
+
+1. **Surface focus** - User focuses the surface associated with the notification
+2. **Workspace selection** - User switches to the workspace with unread notifications
+3. **Panel interaction** - User clicks or interacts with the notification panel
+
+### Manual Read Marking
+
+Notifications can also be marked read via:
+
+- Clicking the notification in the panel
+- Using keyboard shortcuts
+- Workspace context menu actions
+- **Note**: There is currently no v2 API method for `notification.mark_read`. This is tracked for future implementation.
+
+### Read Status Impact
+
+- **Dock badge** - Unread count shown in app icon
+- **Panel indicators** - Blue dot shown on unread notifications
+- **Workspace badges** - Unread count shown per workspace
+- **System notifications** - Only sent for unread notifications
+
+## Notification Panel Behavior
+
+### Display Order
+
+Notifications are displayed:
+- Newest first (descending by creation time)
+- Grouped by workspace
+- Unread notifications highlighted with blue indicator
+
+### Filtering
+
+The notification panel allows filtering by:
+- **All** - Show all notifications
+- **Unread** - Show only unread notifications
+- **Workspace** - Show notifications for specific workspace
+
+### Persistence
+
+Notifications persist:
+- Across app restarts
+- Until explicitly cleared
+- Indefinitely (no automatic expiration)
+
+## Examples
+
+### List All Notifications
+
+```json
+{
+  "id": "req-1",
+  "method": "notification.list",
+  "params": {}
+}
+```
+
+### Filter Unread (Client-side)
+
+```javascript
+// Send request
+const response = await sendSocketRequest({
+  id: "req-2",
+  method: "notification.list",
+  params: {}
+});
+
+// Filter unread notifications
+const unread = response.result.notifications.filter(n => !n.is_read);
+console.log(`${unread.length} unread notifications`);
+```
+
+### Group by Workspace (Client-side)
+
+```javascript
+// Get all notifications
+const response = await sendSocketRequest({
+  id: "req-3",
+  method: "notification.list",
+  params: {}
+});
+
+// Group by workspace
+const byWorkspace = {};
+for (const notif of response.result.notifications) {
+  if (!byWorkspace[notif.workspace_id]) {
+    byWorkspace[notif.workspace_id] = [];
+  }
+  byWorkspace[notif.workspace_id].push(notif);
+}
+```
+
+### Count Unread per Workspace
+
+```javascript
+const response = await sendSocketRequest({
+  id: "req-4",
+  method: "notification.list",
+  params: {}
+});
+
+const unreadCounts = {};
+for (const notif of response.result.notifications) {
+  if (!notif.is_read) {
+    unreadCounts[notif.workspace_id] = 
+      (unreadCounts[notif.workspace_id] || 0) + 1;
+  }
+}
+
+console.log("Unread per workspace:", unreadCounts);
+```
+
+### Check for Specific Notification
+
+```javascript
+const response = await sendSocketRequest({
+  id: "req-5",
+  method: "notification.list",
+  params: {}
+});
+
+const buildNotif = response.result.notifications.find(
+  n => n.title === "Build Complete" && !n.is_read
+);
+
+if (buildNotif) {
+  console.log("Unread build notification found:", buildNotif.body);
+}
+```
+
+## Python Example
+
+```python
+import json
+import socket
+
+def list_notifications(sock_path="/tmp/cmux.sock"):
+    """List all cmux notifications via socket API."""
+    request = {
+        "id": "py-list-1",
+        "method": "notification.list",
+        "params": {}
+    }
+    
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        sock.connect(sock_path)
+        sock.sendall(json.dumps(request).encode() + b"\n")
+        
+        response = b""
+        while b"\n" not in response:
+            response += sock.recv(4096)
+        
+        return json.loads(response.decode())
+    finally:
+        sock.close()
+
+# Usage
+result = list_notifications()
+for notif in result["result"]["notifications"]:
+    status = "unread" if not notif["is_read"] else "read"
+    print(f"[{status}] {notif['title']}: {notif['body']}")
+```
+
+## Implementation Details
+
+From `Sources/TerminalController.swift:4840-4856`:
+
+```swift
+private func v2NotificationList() -> [String: Any] {
+    var items: [[String: Any]] = []
+    DispatchQueue.main.sync {
+        items = TerminalNotificationStore.shared.notifications.map { n in
+            return [
+                "id": n.id.uuidString,
+                "workspace_id": n.tabId.uuidString,
+                "surface_id": v2OrNull(n.surfaceId?.uuidString),
+                "is_read": n.isRead,
+                "title": n.title,
+                "subtitle": n.subtitle,
+                "body": n.body
+            ]
+        }
+    }
+    return ["notifications": items]
+}
+```
+
+Notification store structure from `Sources/TerminalNotificationStore.swift:61-70`:
+
+```swift
+struct TerminalNotification: Identifiable, Hashable {
+    let id: UUID
+    let tabId: UUID
+    let surfaceId: UUID?
+    let title: String
+    let subtitle: String
+    let body: String
+    let createdAt: Date
+    var isRead: Bool
+}
+```
+
+## CLI Equivalent
+
+The CLI `list-notifications` command provides a convenient wrapper:
+
+```bash
+# Plain text output
+cmux list-notifications
+
+# JSON output
+cmux list-notifications --json
+```
+
+See [CLI list-notifications](/cli/notifications/list) for details.
+
+## Use Cases
+
+### Monitoring Agent Activity
+
+```javascript
+// Check for agent notifications
+const result = await sendSocketRequest({
+  method: "notification.list",
+  params: {}
+});
+
+const agentNotifs = result.result.notifications.filter(
+  n => n.title.includes("Claude") || n.title.includes("Codex")
+);
+
+console.log(`${agentNotifs.length} agent notifications`);
+```
+
+### Build Status Dashboard
+
+```javascript
+// Get all build-related notifications
+const result = await sendSocketRequest({
+  method: "notification.list",
+  params: {}
+});
+
+const builds = result.result.notifications.filter(
+  n => n.title.includes("Build")
+);
+
+const failed = builds.filter(n => n.body.includes("failed"));
+const passed = builds.filter(n => n.body.includes("passed"));
+
+console.log(`Builds: ${passed.length} passed, ${failed.length} failed`);
+```
+
+### Audit Trail
+
+```javascript
+// Archive notifications for audit purposes
+const result = await sendSocketRequest({
+  method: "notification.list",
+  params: {}
+});
+
+const timestamp = new Date().toISOString();
+const filename = `notifications-${timestamp}.json`;
+
+await fs.writeFile(
+  filename,
+  JSON.stringify(result.result.notifications, null, 2)
+);
+
+console.log(`Archived ${result.result.notifications.length} notifications to ${filename}`);
+```
+
+## Best Practices
+
+1. **Poll sparingly** - Avoid excessive list calls in tight loops
+2. **Filter client-side** - No server-side filtering available yet
+3. **Cache results** - Store and update incrementally when possible
+4. **Handle empty arrays** - Check for zero notifications gracefully
+5. **Parse timestamps** - Use creation time for sorting/filtering (not included in v2 response currently)
+
+## Performance Considerations
+
+- **O(n) operation** - Returns all notifications (no pagination)
+- **Main thread sync** - Executed synchronously on UI thread
+- **Minimal overhead** - Fast for typical notification counts (less than 100)
+- **No filtering** - All filtering must be done client-side
+
+## Related Methods
+
+- [notification.create](/api/notifications/send) - Send a notification
+- [notification.clear](/api/notifications/clear) - Clear all notifications
+- [workspace.list](/api/workspace/list) - Get workspace information
+- [surface.list](/api/surface/list) - Get surface information
+
+## See Also
+
+- [Notification Feature Guide](/features/notifications)
+- [Socket API Reference](/configuration/socket-api)
+- [CLI Documentation](/cli/notifications/list)

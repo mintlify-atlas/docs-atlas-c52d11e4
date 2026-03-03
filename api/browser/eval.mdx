@@ -1,0 +1,212 @@
+---
+title: browser.eval
+description: Execute JavaScript in a browser surface
+---
+
+## Method
+
+`browser.eval`
+
+## Description
+
+Executes arbitrary JavaScript code in the context of the specified browser surface and returns the result. The script runs in the page's main frame context.
+
+## Parameters
+
+<ParamField path="surface_id" type="string" required>
+  Browser surface ID (UUID or ref like `surface:1`)
+</ParamField>
+
+<ParamField path="script" type="string" required>
+  JavaScript code to execute
+</ParamField>
+
+## Response
+
+<ResponseField name="ok" type="boolean">
+  Always `true` on success
+</ResponseField>
+
+<ResponseField name="value" type="any">
+  Return value from the script. Supports primitives, objects, arrays, null, and undefined
+</ResponseField>
+
+<ResponseField name="surface_id" type="string">
+  Surface UUID
+</ResponseField>
+
+<ResponseField name="surface_ref" type="string">
+  Surface short ref
+</ResponseField>
+
+## Value Serialization
+
+The following JavaScript types are supported:
+
+- **Primitives**: `string`, `number`, `boolean`
+- **Objects**: Plain objects and arrays (serialized as JSON)
+- **null**: Returned as JSON `null`
+- **undefined**: Returned as `{"__cmux_t": "undefined"}`
+
+Functions, Promises, DOM nodes, and other non-serializable values cannot be returned.
+
+## CLI Usage
+
+```bash
+# Execute inline script
+cmux browser surface:1 eval "document.title"
+
+# Execute multi-line script
+cmux browser surface:1 eval "(() => {
+  const btn = document.querySelector('button');
+  return btn ? btn.textContent : null;
+})()"
+
+# With --script flag
+cmux browser surface:1 eval --script "window.location.href"
+
+# JSON output
+cmux browser surface:1 eval --json "({name: 'test', value: 42})"
+```
+
+## Agent-Browser Compatibility
+
+This method corresponds to:
+- `agent-browser eval <script>`
+
+**Key differences:**
+- cmux requires explicit surface targeting
+- Undefined values use `{"__cmux_t": "undefined"}` marker
+- DOM nodes and Promises are not serializable (use element refs via snapshot instead)
+
+## Examples
+
+<CodeGroup>
+
+```bash CLI
+# Get page title
+cmux browser surface:1 eval "document.title"
+
+# Count elements
+cmux browser surface:1 eval "document.querySelectorAll('a').length"
+
+# Get form data
+cmux browser surface:1 eval --json "Array.from(document.querySelectorAll('input')).map(i => ({name: i.name, value: i.value}))"
+
+# Check for element
+cmux browser surface:1 eval "document.querySelector('.error-message') !== null"
+```
+
+```python Python
+import json
+import subprocess
+
+def eval_js(surface_id: str, script: str) -> any:
+    cmd = ["cmux", "browser", surface_id, "eval", "--json", script]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    data = json.loads(result.stdout)
+    
+    # Handle undefined
+    value = data.get("value")
+    if isinstance(value, dict) and value.get("__cmux_t") == "undefined":
+        return None
+    return value
+
+# Get all links
+links = eval_js("surface:1", """
+  Array.from(document.querySelectorAll('a')).map(a => ({
+    text: a.textContent.trim(),
+    href: a.href
+  }))
+""")
+print(f"Found {len(links)} links")
+
+# Check authentication state
+is_logged_in = eval_js("surface:1", """
+  document.querySelector('.user-profile') !== null
+""")
+print(f"Logged in: {is_logged_in}")
+```
+
+```javascript JavaScript
+const { execSync } = require('child_process');
+
+function evalJS(surfaceId, script) {
+  const cmd = `cmux browser ${surfaceId} eval --json ${JSON.stringify(script)}`;
+  const output = execSync(cmd, { encoding: 'utf-8' });
+  const data = JSON.parse(output);
+  
+  // Handle undefined
+  const value = data.value;
+  if (value && typeof value === 'object' && value.__cmux_t === 'undefined') {
+    return undefined;
+  }
+  return value;
+}
+
+// Get page metadata
+const meta = evalJS('surface:1', `({
+  title: document.title,
+  url: window.location.href,
+  ready: document.readyState
+})`);
+
+console.log('Page:', meta.title);
+console.log('URL:', meta.url);
+console.log('Ready:', meta.ready);
+```
+
+</CodeGroup>
+
+## Error Codes
+
+| Code | Description |
+|------|-------------|
+| `not_found` | Surface not found or not a browser surface |
+| `invalid_params` | Missing or empty script |
+| `eval_error` | JavaScript execution failed |
+| `invalid_state` | Browser surface not ready |
+
+## Use Cases
+
+### Form Validation
+```bash
+cmux browser surface:1 eval "
+const errors = Array.from(document.querySelectorAll('.error'))
+  .map(e => e.textContent.trim())
+  .filter(Boolean);
+errors.length > 0 ? errors : null
+"
+```
+
+### Wait for Dynamic Content
+```bash
+# Check if content loaded
+cmux browser surface:1 eval "document.querySelector('.data-loaded') !== null"
+```
+
+### Extract Structured Data
+```bash
+cmux browser surface:1 eval --json "
+Array.from(document.querySelectorAll('.product')).map(p => ({
+  name: p.querySelector('h3')?.textContent,
+  price: p.querySelector('.price')?.textContent,
+  stock: p.querySelector('.stock')?.textContent
+}))
+"
+```
+
+## Best Practices
+
+1. **Keep scripts focused**: Execute single-purpose scripts for clarity
+2. **Use snapshot refs**: For element interactions, prefer `browser.snapshot` + `browser.click` over manual eval
+3. **Handle nulls**: Always check for null/undefined when querying elements
+4. **Avoid side effects**: Use eval for reading state; use dedicated methods (click, type) for actions
+5. **Error handling**: Wrap complex scripts in try-catch to return error details
+
+## See Also
+
+- [browser.snapshot](/api/browser/snapshot) - Capture DOM with element refs
+- [browser.wait](/api/browser/wait) - Wait for conditions
+- [Automation Commands](/cli/browser/automation#get-commands) - Extract element properties
+- [browser.click](/api/browser/click) - Interact with elements

@@ -1,0 +1,475 @@
+---
+title: Interaction Commands
+description: Click, type, fill, and interact with page elements
+---
+
+## Overview
+
+Interaction commands allow you to perform user actions on page elements using CSS selectors or element refs.
+
+## Element Targeting
+
+All interaction commands accept selectors:
+
+### CSS Selectors
+
+```bash
+# By ID
+cmux browser surface:1 click "#submit-button"
+
+# By class
+cmux browser surface:1 hover ".menu-item"
+
+# By tag
+cmux browser surface:1 focus "input[type='text']"
+
+# By attribute
+cmux browser surface:1 click "[data-testid='login-button']"
+
+# Complex selectors
+cmux browser surface:1 click "nav > ul > li:first-child > a"
+```
+
+### Element Refs
+
+Use refs from snapshot output:
+
+```bash
+# Get snapshot with refs
+cmux browser surface:1 snapshot
+# @e1 button "Submit"
+# @e2 link "Cancel"
+
+# Click by ref
+cmux browser surface:1 click "@e1"
+```
+
+## Click
+
+Click an element:
+
+```bash
+cmux browser surface:1 click "#submit-button"
+cmux browser surface:1 click ".menu-item"
+```
+
+**With selector flag:**
+
+```bash
+cmux browser surface:1 click --selector "button[type='submit']"
+```
+
+**With post-action snapshot:**
+
+```bash
+cmux browser surface:1 click "#login" --snapshot-after
+```
+
+**Response:**
+
+```json
+{
+  "ok": true,
+  "post_action_snapshot": "@e1 heading \"Welcome\"\n@e2 text \"You are logged in\"\n..."
+}
+```
+
+## Double Click
+
+Double-click an element:
+
+```bash
+cmux browser surface:1 dblclick ".editable-field"
+cmux browser surface:1 dblclick "[contenteditable='true']"
+```
+
+**Response:**
+
+```json
+{
+  "ok": true
+}
+```
+
+## Hover
+
+Hover over an element (useful for revealing tooltips or menus):
+
+```bash
+cmux browser surface:1 hover ".menu-trigger"
+cmux browser surface:1 hover "[title='Show more']"
+```
+
+**Example workflow:**
+
+```bash
+# Hover to reveal dropdown
+cmux browser surface:1 hover ".dropdown-trigger"
+
+# Take snapshot to see revealed elements
+cmux browser surface:1 snapshot --snapshot-after
+
+# Click revealed item
+cmux browser surface:1 click ".dropdown-menu li:nth-child(2)"
+```
+
+## Focus
+
+Focus an element (useful for form fields and accessibility):
+
+```bash
+cmux browser surface:1 focus "#username"
+cmux browser surface:1 focus "textarea[name='comment']"
+```
+
+**Response:**
+
+```json
+{
+  "ok": true
+}
+```
+
+## Type
+
+Type text into an element (appends to existing content):
+
+```bash
+cmux browser surface:1 type "#search" "query text"
+cmux browser surface:1 type ".editor" "Hello, world!"
+```
+
+**With selector flag:**
+
+```bash
+cmux browser surface:1 type --selector "input[name='email']" --text "user@example.com"
+```
+
+**Multi-word text:**
+
+```bash
+cmux browser surface:1 type "#message" "This is a multi-word message"
+```
+
+**Response:**
+
+```json
+{
+  "ok": true
+}
+```
+
+**Note:** `type` appends text. Use `fill` to replace existing content.
+
+## Fill
+
+Fill an element (clears existing content first):
+
+```bash
+cmux browser surface:1 fill "#username" "admin"
+cmux browser surface:1 fill "input[type='password']" "secret"
+```
+
+**Empty string (clears field):**
+
+```bash
+cmux browser surface:1 fill "#search" ""
+```
+
+**With snapshot:**
+
+```bash
+cmux browser surface:1 fill "#email" "user@example.com" --snapshot-after
+```
+
+**Response:**
+
+```json
+{
+  "ok": true,
+  "post_action_snapshot": "@e1 textbox \"user@example.com\"\n..."
+}
+```
+
+## Press / Key
+
+Press a keyboard key:
+
+```bash
+cmux browser surface:1 press "Enter"
+cmux browser surface:1 press "Escape"
+cmux browser surface:1 key "Tab"
+```
+
+**Special keys:**
+
+```bash
+cmux browser surface:1 press "ArrowDown"
+cmux browser surface:1 press "Backspace"
+cmux browser surface:1 press "Delete"
+```
+
+**Modifiers:**
+
+```bash
+cmux browser surface:1 press "Meta+s"  # Cmd+S / Ctrl+S
+cmux browser surface:1 press "Shift+Tab"
+cmux browser surface:1 press "Control+a"
+```
+
+**Response:**
+
+```json
+{
+  "ok": true
+}
+```
+
+## Key Down / Key Up
+
+Press and release keys separately:
+
+```bash
+cmux browser surface:1 keydown "Shift"
+cmux browser surface:1 keydown "a"
+cmux browser surface:1 keyup "a"
+cmux browser surface:1 keyup "Shift"
+```
+
+**Use case:**
+
+```bash
+# Simulate Shift+Click
+cmux browser surface:1 keydown "Shift"
+cmux browser surface:1 click ".item"
+cmux browser surface:1 keyup "Shift"
+```
+
+## Check
+
+Check a checkbox or radio button:
+
+```bash
+cmux browser surface:1 check "#terms-agreement"
+cmux browser surface:1 check "input[name='newsletter']"
+```
+
+**Idempotent:**
+
+```bash
+# Safe to call even if already checked
+cmux browser surface:1 check "#already-checked"
+```
+
+**Response:**
+
+```json
+{
+  "ok": true
+}
+```
+
+## Uncheck
+
+Uncheck a checkbox:
+
+```bash
+cmux browser surface:1 uncheck "#newsletter"
+cmux browser surface:1 uncheck "input[type='checkbox']"
+```
+
+**Response:**
+
+```json
+{
+  "ok": true
+}
+```
+
+## Select
+
+Select an option from a dropdown:
+
+```bash
+cmux browser surface:1 select "#country" "US"
+cmux browser surface:1 select "select[name='color']" "blue"
+```
+
+**With flags:**
+
+```bash
+cmux browser surface:1 select --selector "#size" --value "large"
+```
+
+**Response:**
+
+```json
+{
+  "ok": true
+}
+```
+
+**Value matching:**
+- Matches `<option value="...">`
+- Falls back to visible text if value not found
+
+## Scroll Into View
+
+Scroll an element into view:
+
+```bash
+cmux browser surface:1 scrollintoview ".footer"
+cmux browser surface:1 scrollinto "#bottom-section"
+cmux browser surface:1 scroll-into-view ".hidden-element"
+```
+
+**Use case:**
+
+```bash
+# Scroll to element before interacting
+cmux browser surface:1 scrollintoview "#submit"
+cmux browser surface:1 click "#submit"
+```
+
+## Scroll
+
+Scroll the page or an element:
+
+### Scroll Page
+
+```bash
+# Scroll down 500 pixels
+cmux browser surface:1 scroll 500
+
+# Scroll up
+cmux browser surface:1 scroll -500
+
+# Scroll with explicit delta
+cmux browser surface:1 scroll --dy 300
+```
+
+### Scroll Element
+
+```bash
+# Scroll element down
+cmux browser surface:1 scroll --selector ".scrollable" --dy 200
+
+# Scroll element horizontally
+cmux browser surface:1 scroll --selector ".carousel" --dx 100
+
+# Scroll in both directions
+cmux browser surface:1 scroll --selector ".map" --dx 50 --dy 50
+```
+
+**Response:**
+
+```json
+{
+  "ok": true
+}
+```
+
+## Post-Action Snapshots
+
+Many commands support `--snapshot-after` to verify results:
+
+```bash
+cmux browser surface:1 click "#load-more" --snapshot-after
+```
+
+**Response includes:**
+
+```json
+{
+  "ok": true,
+  "post_action_snapshot": "@e1 button \"Loading...\"\n@e2 item \"New Item 1\"\n@e3 item \"New Item 2\"\n...",
+  "url": "https://example.com/page",
+  "title": "Updated Page Title"
+}
+```
+
+## Interaction Patterns
+
+### Form Submission
+
+```bash
+# Fill and submit form
+cmux browser surface:1 fill "#username" "user@example.com"
+cmux browser surface:1 fill "#password" "secret"
+cmux browser surface:1 click "#submit" --snapshot-after
+```
+
+### Multi-Step Interaction
+
+```bash
+# Click to reveal, then interact
+cmux browser surface:1 click ".expand-button"
+cmux browser surface:1 snapshot
+cmux browser surface:1 click "@e5"  # Click revealed element
+```
+
+### Conditional Actions
+
+```bash
+# Check state before acting
+cmux browser surface:1 is checked "#newsletter"
+# If not checked:
+cmux browser surface:1 check "#newsletter"
+```
+
+### Keyboard Navigation
+
+```bash
+# Navigate with keyboard
+cmux browser surface:1 focus "#first-input"
+cmux browser surface:1 press "Tab"
+cmux browser surface:1 press "Tab"
+cmux browser surface:1 press "Enter"
+```
+
+## Error Handling
+
+### Element Not Found
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "not_found",
+    "message": "Element not found: #missing-button",
+    "selector": "#missing-button"
+  }
+}
+```
+
+### Element Not Interactable
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "invalid_state",
+    "message": "Element not interactable (hidden or disabled)",
+    "selector": ".hidden-button"
+  }
+}
+```
+
+### Wrong Element Type
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "invalid_params",
+    "message": "Element is not a checkbox: div.container",
+    "selector": "div.container"
+  }
+}
+```
+
+## See Also
+
+- [Navigation Commands](/cli/browser/navigation) - Navigate pages and history
+- [Automation Commands](/cli/browser/automation) - Wait, find, eval
+- [Snapshot Format](/cli/browser/snapshot) - Understanding element refs

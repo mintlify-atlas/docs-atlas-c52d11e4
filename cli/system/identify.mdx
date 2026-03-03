@@ -1,0 +1,207 @@
+---
+title: identify
+description: Get current window, workspace, pane, and surface context
+---
+
+The `identify` command returns information about the currently active or focused context, including window, workspace, pane, and surface IDs.
+
+## Usage
+
+```bash
+cmux identify [--workspace <id|ref|index>] [--surface <id|ref|index>] [--no-caller]
+```
+
+## Options
+
+| Option | Description |
+|--------|-------------|
+| `--workspace` | Specify a workspace context (ID, ref like `workspace:1`, or index) |
+| `--surface` | Specify a surface context (ID, ref like `surface:1`, or index) |
+| `--no-caller` | Exclude caller context from the response |
+| `--json` | Output in JSON format (always returns JSON) |
+| `--id-format` | Control ID format: `refs`, `uuids`, or `both` |
+
+## Response Format
+
+The command returns a JSON object with two main sections:
+
+### `focused` Object
+
+Contains the currently focused/active context:
+
+```json
+{
+  "focused": {
+    "window_id": "uuid",
+    "window_ref": "window:1",
+    "workspace_id": "uuid",
+    "workspace_ref": "workspace:1",
+    "pane_id": "uuid",
+    "pane_ref": "pane:1",
+    "surface_id": "uuid",
+    "surface_ref": "surface:1"
+  },
+  "caller": {
+    "workspace_id": "uuid",
+    "surface_id": "uuid"
+  }
+}
+```
+
+### `caller` Object
+
+When called from within a terminal session with `CMUX_WORKSPACE_ID` and `CMUX_SURFACE_ID` environment variables set, the `caller` object identifies the originating context.
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `window_id` | string | UUID of the window |
+| `window_ref` | string | Human-readable reference (e.g., `window:1`) |
+| `workspace_id` | string | UUID of the workspace |
+| `workspace_ref` | string | Human-readable reference (e.g., `workspace:2`) |
+| `pane_id` | string | UUID of the pane |
+| `pane_ref` | string | Human-readable reference (e.g., `pane:1`) |
+| `surface_id` | string | UUID of the surface |
+| `surface_ref` | string | Human-readable reference (e.g., `surface:3`) |
+
+## Examples
+
+### Get current focused context
+
+```bash
+cmux identify
+```
+
+Returns the currently active window, workspace, pane, and surface.
+
+### Identify from environment variables
+
+When run from within a cmux terminal, the command automatically uses `CMUX_WORKSPACE_ID` and `CMUX_SURFACE_ID` environment variables to populate the `caller` object:
+
+```bash
+# Inside a cmux terminal
+cmux identify
+```
+
+### Specify a workspace context
+
+```bash
+cmux identify --workspace workspace:2
+```
+
+### Exclude caller context
+
+```bash
+cmux identify --no-caller
+```
+
+Returns only the `focused` object without the `caller` information.
+
+### Use with --id-format
+
+```bash
+# Show only refs
+cmux identify --id-format refs
+
+# Show only UUIDs
+cmux identify --id-format uuids
+
+# Show both
+cmux identify --id-format both
+```
+
+## Agent Discovery Workflow
+
+The `identify` command is essential for agent discovery and context awareness:
+
+### 1. Determine Execution Context
+
+```bash
+# Agent discovers where it's running
+CONTEXT=$(cmux identify)
+WORKSPACE=$(echo $CONTEXT | jq -r '.caller.workspace_id')
+SURFACE=$(echo $CONTEXT | jq -r '.caller.surface_id')
+```
+
+### 2. Verify Environment Integration
+
+```bash
+# Check if running in a cmux-managed terminal
+if [ -n "$CMUX_WORKSPACE_ID" ] && [ -n "$CMUX_SURFACE_ID" ]; then
+  echo "Running inside cmux terminal"
+  RESULT=$(cmux identify)
+  # caller will match CMUX_* env vars
+fi
+```
+
+### 3. Multi-Surface Coordination
+
+```bash
+# Agent in surface:1 sends data to surface:2
+MY_SURFACE=$(cmux identify | jq -r '.caller.surface_id')
+TARGET_SURFACE=$(cmux identify --workspace $CMUX_WORKSPACE_ID | jq -r '.focused.surface_id')
+
+if [ "$MY_SURFACE" != "$TARGET_SURFACE" ]; then
+  cmux send --surface $TARGET_SURFACE "Agent completed task"
+fi
+```
+
+### 4. Workspace-Relative Operations
+
+```bash
+# Discover current workspace and create a new split
+WS=$(cmux identify | jq -r '.caller.workspace_id')
+cmux new-split --workspace $WS right
+```
+
+## Use Cases
+
+### Automation Scripts
+
+Use `identify` to make scripts context-aware:
+
+```bash
+#!/bin/bash
+CTX=$(cmux identify)
+WORKSPACE=$(echo $CTX | jq -r '.caller.workspace_id')
+
+# Run command in same workspace
+cmux send --workspace $WORKSPACE "npm run build"
+```
+
+### CI/CD Integration
+
+Identify the surface where a build is running:
+
+```bash
+# In CI pipeline
+SURFACE_ID=$(cmux identify | jq -r '.caller.surface_id')
+cmux set-status --surface $SURFACE_ID build "Building..."
+```
+
+### Multi-Window Workflows
+
+Determine which window is active:
+
+```bash
+WINDOW=$(cmux identify | jq -r '.focused.window_ref')
+echo "Currently in $WINDOW"
+```
+
+## Implementation Notes
+
+From `CLI/cmux.swift:749-782`:
+
+- The command uses the `system.identify` v2 socket method
+- Caller context is included by default unless `--no-caller` is specified
+- Environment variables `CMUX_WORKSPACE_ID` and `CMUX_SURFACE_ID` are used when available
+- Workspace and surface handles can be normalized from IDs, refs, or indices
+- The response always includes both UUIDs and refs unless filtered by `--id-format`
+
+## Related Commands
+
+- [capabilities](/cli/system/capabilities) - Query system capabilities
+- [tree](/cli/system/tree) - View hierarchical layout
+- [list-workspaces](/cli/workspaces/list) - List all workspaces
+- [list-panes](/cli/panes/list) - List panes in a workspace

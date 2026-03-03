@@ -1,0 +1,122 @@
+---
+title: list-workspaces
+description: List all workspaces in the current window
+---
+
+## Syntax
+
+```bash
+cmux list-workspaces [--json] [--id-format refs|uuids|both]
+```
+
+## Description
+
+Lists all workspaces in the currently focused window, showing their IDs, titles, and selection status.
+
+## Options
+
+| Flag | Description |
+|------|-------------|
+| `--json` | Output results in JSON format instead of text |
+| `--id-format` | Control ID output format: `refs` (default), `uuids`, or `both` |
+| `--window <id>` | Target a specific window (must appear before the command) |
+
+## Output Formats
+
+### Text Output (default)
+
+Each workspace is displayed with:
+- Selection indicator (`*` for selected workspace, two spaces otherwise)
+- Workspace handle (short ref or UUID depending on `--id-format`)
+- Title (if set)
+- `[selected]` tag for the currently selected workspace
+
+```bash
+$ cmux list-workspaces
+  workspace:1  My Project
+* workspace:2  [selected]
+  workspace:3  Terminal Session
+```
+
+### JSON Output
+
+Returns an object with a `workspaces` array:
+
+```json
+{
+  "workspaces": [
+    {
+      "ref": "workspace:1",
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "title": "My Project",
+      "selected": false
+    },
+    {
+      "ref": "workspace:2",
+      "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+      "title": "",
+      "selected": true
+    }
+  ]
+}
+```
+
+## Short References
+
+Workspaces are numbered sequentially within a window starting from 1. You can reference them as:
+- `workspace:1` - First workspace
+- `workspace:2` - Second workspace
+- etc.
+
+These short refs are stable as long as workspaces aren't reordered or closed.
+
+## Environment Variables
+
+None. This command always operates on the currently focused window unless `--window` is specified.
+
+## Examples
+
+### List workspaces in text format
+
+```bash
+cmux list-workspaces
+```
+
+### List workspaces with JSON output
+
+```bash
+cmux list-workspaces --json
+```
+
+### Show both UUIDs and refs
+
+```bash
+cmux list-workspaces --json --id-format both
+```
+
+### List workspaces in a specific window
+
+```bash
+cmux --window window:1 list-workspaces
+```
+
+### Use in scripts to get selected workspace
+
+```bash
+# Get the selected workspace ID
+SELECTED=$(cmux list-workspaces --json | jq -r '.workspaces[] | select(.selected) | .ref')
+echo "Selected: $SELECTED"
+```
+
+### Count total workspaces
+
+```bash
+cmux list-workspaces --json | jq '.workspaces | length'
+```
+
+## Related Commands
+
+- [select-workspace](/cli/workspaces/select) - Switch to a different workspace
+- [new-workspace](/cli/workspaces/create) - Create a new workspace
+- [close-workspace](/cli/workspaces/close) - Close a workspace
+- [rename-workspace](/cli/workspaces/rename) - Change workspace title

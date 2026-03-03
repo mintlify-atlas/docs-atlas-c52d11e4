@@ -1,0 +1,117 @@
+---
+title: workspace.list
+description: List all workspaces in a window
+---
+
+## Overview
+
+Returns a list of all workspaces in the specified window with their metadata.
+
+## Method
+
+```
+workspace.list
+```
+
+## Parameters
+
+<ParamField path="window_id" type="string" optional>
+  Window identifier (UUID or ref). If omitted, uses the active window.
+</ParamField>
+
+## Response
+
+<ResponseField name="window_id" type="string">
+  UUID of the window containing the workspaces
+</ResponseField>
+
+<ResponseField name="window_ref" type="string">
+  Short reference for the window (e.g., "w1")
+</ResponseField>
+
+<ResponseField name="workspaces" type="array">
+  Array of workspace objects
+  
+  <Expandable title="Workspace object">
+    <ResponseField name="id" type="string">
+      Workspace UUID
+    </ResponseField>
+    
+    <ResponseField name="ref" type="string">
+      Short reference (e.g., "ws1")
+    </ResponseField>
+    
+    <ResponseField name="index" type="number">
+      Zero-based position in the workspace list
+    </ResponseField>
+    
+    <ResponseField name="title" type="string">
+      Workspace title (custom or auto-generated)
+    </ResponseField>
+    
+    <ResponseField name="selected" type="boolean">
+      Whether this workspace is currently selected
+    </ResponseField>
+    
+    <ResponseField name="pinned" type="boolean">
+      Whether this workspace is pinned
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Error Codes
+
+<ResponseField name="unavailable" type="error">
+  TabManager not available
+</ResponseField>
+
+## Example
+
+```bash
+cmux list-workspaces --json
+```
+
+```json
+{
+  "window_id": "550e8400-e29b-41d4-a716-446655440000",
+  "window_ref": "w1",
+  "workspaces": [
+    {
+      "id": "650e8400-e29b-41d4-a716-446655440001",
+      "ref": "ws1",
+      "index": 0,
+      "title": "~/projects/app",
+      "selected": true,
+      "pinned": false
+    },
+    {
+      "id": "650e8400-e29b-41d4-a716-446655440002",
+      "ref": "ws2",
+      "index": 1,
+      "title": "Database",
+      "selected": false,
+      "pinned": true
+    }
+  ]
+}
+```
+
+## Socket API
+
+```json
+{
+  "id": "req-1",
+  "method": "workspace.list",
+  "params": {
+    "window_id": "550e8400-e29b-41d4-a716-446655440000"
+  }
+}
+```
+
+## Implementation
+
+Source: `Sources/TerminalController.swift:2340`
+
+- Returns workspaces in display order (index 0 = leftmost)
+- Selected workspace has `selected: true`
+- Pinned workspaces cannot be closed by bulk operations

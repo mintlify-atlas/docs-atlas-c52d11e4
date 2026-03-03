@@ -1,0 +1,224 @@
+---
+title: Notifications
+description: Visual notification system with rings, panel, and jump-to-unread for AI coding agents
+---
+
+The notification system in cmux helps you track when AI coding agents need your attention across multiple workspaces and split panes.
+
+## Notification Rings
+
+When a coding agent needs your attention, cmux provides visual cues:
+
+- **Blue ring** appears around the pane containing the notification
+- **Tab lights up** in the sidebar to show which workspace has unread notifications
+
+<Frame>
+  <img src="/images/notification-rings.png" alt="Notification rings around panes" />
+</Frame>
+
+## Notification Panel
+
+View all pending notifications in one centralized location:
+
+```bash Keyboard
+Cmd+I
+```
+
+The notification panel shows:
+- All pending notifications across workspaces
+- Source workspace and pane for each notification
+- Notification title, subtitle, and body text
+
+<Frame>
+  <img src="/images/sidebar-notification-badge.png" alt="Sidebar notification badge" />
+</Frame>
+
+## Jump to Unread
+
+Quickly navigate to the most recent unread notification:
+
+```bash
+Cmd+Shift+U
+```
+
+This automatically:
+1. Switches to the workspace containing the notification
+2. Focuses the pane with the unread notification
+3. Clears the notification ring
+
+<Tip>
+This is especially useful when running multiple AI agent sessions in parallel and you need to quickly find which one is waiting for input.
+</Tip>
+
+## Sending Notifications
+
+Use the `cmux notify` CLI command to send notifications from scripts or agent hooks:
+
+<CodeGroup>
+```bash Simple
+cmux notify --title "Build Complete"
+```
+
+```bash With Details
+cmux notify --title "Claude Code" --subtitle "Permission" --body "Approval needed"
+```
+
+```bash Target Specific Pane
+cmux notify --title "Done" --tab 0 --panel 1
+```
+</CodeGroup>
+
+## Detection and Fallback
+
+Always check if cmux is available before sending notifications:
+
+```bash
+# With fallback to macOS notifications
+command -v cmux &>/dev/null && \
+  cmux notify --title "Done" --body "Task complete" || \
+  osascript -e 'display notification "Task complete" with title "Done"'
+```
+
+## Integration Examples
+
+<AccordionGroup>
+  <Accordion title="Claude Code Hooks">
+    Add to `~/.claude/settings.json`:
+
+    ```json
+    {
+      "hooks": {
+        "Notification": [
+          {
+            "matcher": "idle_prompt",
+            "hooks": [
+              {
+                "type": "command",
+                "command": "command -v cmux &>/dev/null && cmux notify --title 'Claude Code' --body 'Waiting for input' || osascript -e 'display notification \"Waiting for input\" with title \"Claude Code\"'"
+              }
+            ]
+          },
+          {
+            "matcher": "permission_prompt",
+            "hooks": [
+              {
+                "type": "command",
+                "command": "command -v cmux &>/dev/null && cmux notify --title 'Claude Code' --subtitle 'Permission' --body 'Approval needed' || osascript -e 'display notification \"Approval needed\" with title \"Claude Code\"'"
+              }
+            ]
+          }
+        ]
+      }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="OpenAI Codex">
+    Add to `~/.codex/config.toml`:
+
+    ```toml
+    notify = ["bash", "-c", "command -v cmux &>/dev/null && cmux notify --title Codex --body \"$(echo $1 | jq -r '.\"last-assistant-message\" // \"Turn complete\"' 2>/dev/null | head -c 100)\" || osascript -e 'display notification \"Turn complete\" with title \"Codex\"'", "--"]
+    ```
+
+    Or create a script `~/.local/bin/codex-notify.sh`:
+
+    ```bash
+    #!/bin/bash
+    MSG=$(echo "$1" | jq -r '."last-assistant-message" // "Turn complete"' 2>/dev/null | head -c 100)
+    command -v cmux &>/dev/null && \
+      cmux notify --title "Codex" --body "$MSG" || \
+      osascript -e "display notification \"$MSG\" with title \"Codex\""
+    ```
+
+    Then in `config.toml`:
+    ```toml
+    notify = ["bash", "~/.local/bin/codex-notify.sh"]
+    ```
+  </Accordion>
+
+  <Accordion title="OpenCode Plugin">
+    Create `.opencode/plugins/cmux-notify.js`:
+
+    ```javascript
+    export const CmuxNotificationPlugin = async ({ $, }) => {
+      const notify = async (title, body) => {
+        try {
+          await $`command -v cmux && cmux notify --title ${title} --body ${body}`;
+        } catch {
+          await $`osascript -e ${"display notification \"" + body + "\" with title \"" + title + "\""}`;
+        }
+      };
+
+      return {
+        event: async ({ event }) => {
+          if (event.type === "session.idle") {
+            await notify("OpenCode", "Session idle");
+          }
+        },
+      };
+    };
+    ```
+  </Accordion>
+
+  <Accordion title="Python">
+    ```python
+    import shutil
+    import subprocess
+
+    def notify(title: str, body: str = ""):
+        if shutil.which("cmux"):
+            subprocess.run(["cmux", "notify", "--title", title, "--body", body])
+        else:
+            # Fallback to macOS
+            subprocess.run(["osascript", "-e", f'display notification "{body}" with title "{title}"'])
+
+    # Usage
+    notify("Agent", "Task complete")
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Environment Variables
+
+cmux sets these variables in child shells for notification targeting:
+
+| Variable | Description |
+|----------|-------------|
+| `CMUX_SOCKET_PATH` | Path to control socket |
+| `CMUX_TAB_ID` | UUID of the current tab |
+| `CMUX_PANEL_ID` | UUID of the current panel |
+
+## CLI Commands
+
+```bash
+# Send notification
+cmux notify --title <text> [--subtitle <text>] [--body <text>] [--tab <id>] [--panel <id>]
+
+# List all notifications
+cmux list-notifications
+
+# Clear all notifications
+cmux clear-notifications
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Check Availability" icon="check">
+    Always use `command -v cmux` before calling to ensure cmux is installed
+  </Card>
+  <Card title="Provide Fallbacks" icon="rotate">
+    Use `|| osascript` for macOS fallback when cmux isn't available
+  </Card>
+  <Card title="Keep It Concise" icon="compress">
+    Use brief titles and save details for the body text
+  </Card>
+  <Card title="Context Matters" icon="message">
+    Include relevant context in notification body (not just "waiting for input")
+  </Card>
+</CardGroup>
+
+<Card title="Related" icon="link">
+  - [Workspaces](/features/workspaces) - Organize terminals with workspace tabs
+  - [Vertical Tabs](/features/vertical-tabs) - Sidebar shows notification status
+</Card>

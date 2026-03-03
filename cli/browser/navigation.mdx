@@ -1,0 +1,386 @@
+---
+title: Navigation Commands
+description: Navigate between pages, manage history, and control browser surfaces
+---
+
+## Overview
+
+Navigation commands control page loading, history, and browser lifecycle.
+
+## Open
+
+Open a new browser surface or navigate an existing one:
+
+### Open New Browser
+
+```bash
+# Open in new split
+cmux browser open https://example.com
+
+# Open in specific workspace
+cmux browser open --workspace workspace:1 https://github.com
+
+# Open in specific window
+cmux browser open --window window:1 https://google.com
+```
+
+**Response:**
+
+```json
+{
+  "ok": true,
+  "surface_ref": "surface:3",
+  "surface_id": "550e8400-e29b-41d4-a716-446655440000",
+  "pane_ref": "pane:2",
+  "created_split": true,
+  "placement": "split"
+}
+```
+
+### Navigate Existing Surface
+
+When you specify a surface before `open`, it navigates instead:
+
+```bash
+# Navigate existing browser
+cmux browser surface:1 open https://example.com
+
+# Equivalent to navigate command
+cmux browser surface:1 navigate https://example.com
+```
+
+### Placement Behavior
+
+**Default (caller-relative)**:
+1. Reuses nearest right sibling pane if available
+2. Otherwise splits right from caller pane
+3. Never reshuffles unrelated panes
+
+**Explicit targeting**:
+```bash
+# Use existing surface as placement source
+cmux browser surface:1 open https://new-page.com
+
+# Target specific workspace
+cmux browser open --workspace workspace:2 https://example.com
+```
+
+## Navigate / Goto
+
+Navigate an existing browser surface to a URL:
+
+```bash
+cmux browser surface:1 navigate https://example.com
+cmux browser surface:1 goto https://github.com
+```
+
+**With post-action snapshot:**
+
+```bash
+cmux browser surface:1 navigate https://example.com --snapshot-after
+```
+
+**Response:**
+
+```json
+{
+  "ok": true,
+  "url": "https://example.com/",
+  "title": "Example Domain",
+  "post_action_snapshot": "<accessibility tree>\n@e1 heading \"Example Domain\"\n@e2 link \"More information...\"\n..."
+}
+```
+
+## Back
+
+Go back in browser history:
+
+```bash
+cmux browser surface:1 back
+```
+
+**With snapshot:**
+
+```bash
+cmux browser surface:1 back --snapshot-after
+```
+
+**Response:**
+
+```json
+{
+  "ok": true,
+  "url": "https://previous-page.com",
+  "title": "Previous Page"
+}
+```
+
+**Error if no history:**
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "invalid_state",
+    "message": "Cannot go back: no previous page"
+  }
+}
+```
+
+## Forward
+
+Go forward in browser history:
+
+```bash
+cmux browser surface:1 forward
+```
+
+**With snapshot:**
+
+```bash
+cmux browser surface:1 forward --snapshot-after
+```
+
+Response format matches `back` command.
+
+## Reload
+
+Reload the current page:
+
+```bash
+cmux browser surface:1 reload
+```
+
+**Force refresh (bypass cache):**
+
+```bash
+# WKWebView always bypasses cache on reload
+cmux browser surface:1 reload
+```
+
+**With snapshot:**
+
+```bash
+cmux browser surface:1 reload --snapshot-after
+```
+
+**Response:**
+
+```json
+{
+  "ok": true,
+  "url": "https://example.com/",
+  "title": "Example Domain (reloaded)"
+}
+```
+
+## Get URL
+
+Retrieve the current page URL:
+
+```bash
+cmux browser surface:1 url
+cmux browser surface:1 get-url
+cmux browser surface:1 get url
+```
+
+**Plain text output:**
+
+```
+https://example.com/page
+```
+
+**JSON output:**
+
+```bash
+cmux browser --json surface:1 url
+```
+
+```json
+{
+  "ok": true,
+  "url": "https://example.com/page"
+}
+```
+
+## Get Title
+
+Retrieve the current page title:
+
+```bash
+cmux browser surface:1 get title
+```
+
+**Plain text:**
+
+```
+Example Domain
+```
+
+**JSON:**
+
+```json
+{
+  "ok": true,
+  "title": "Example Domain"
+}
+```
+
+## Identify
+
+Get comprehensive browser and context information:
+
+```bash
+cmux browser identify
+cmux browser identify --surface surface:1
+```
+
+**Response:**
+
+```json
+{
+  "ok": true,
+  "focused": {
+    "window_ref": "window:1",
+    "workspace_ref": "workspace:1",
+    "pane_ref": "pane:1",
+    "surface_ref": "surface:1",
+    "surface_type": "browser"
+  },
+  "browser": {
+    "surface": "surface:1",
+    "url": "https://example.com",
+    "title": "Example Domain"
+  }
+}
+```
+
+## Legacy Aliases
+
+These v1 commands are shimmed to browser namespace:
+
+```bash
+# Legacy open-browser
+cmux open-browser https://example.com
+# → cmux browser open https://example.com
+
+# Legacy navigate
+cmux navigate --panel surface:1 https://example.com
+# → cmux browser surface:1 navigate https://example.com
+
+# Legacy browser-back
+cmux browser-back --panel surface:1
+# → cmux browser surface:1 back
+
+# Legacy browser-forward
+cmux browser-forward --panel surface:1
+# → cmux browser surface:1 forward
+
+# Legacy browser-reload
+cmux browser-reload --panel surface:1
+# → cmux browser surface:1 reload
+
+# Legacy get-url
+cmux get-url --panel surface:1
+# → cmux browser surface:1 get url
+```
+
+**Note:** `--panel` is automatically converted to `--surface`.
+
+## Navigation Patterns
+
+### Linear Workflow
+
+```bash
+# Open and navigate through a sequence
+cmux browser open https://app.example.com
+cmux browser surface:1 navigate https://app.example.com/login
+cmux browser surface:1 fill "#username" "user@example.com"
+cmux browser surface:1 click "#submit" --snapshot-after
+
+# Navigate based on result
+cmux browser surface:1 navigate https://app.example.com/dashboard
+```
+
+### Exploration with History
+
+```bash
+# Navigate forward
+cmux browser surface:1 navigate https://docs.example.com
+cmux browser surface:1 click "a[href='/api']"
+cmux browser surface:1 click "a[href='/api/auth']"
+
+# Go back to explore different path
+cmux browser surface:1 back
+cmux browser surface:1 back
+cmux browser surface:1 click "a[href='/guides']"
+```
+
+### Multi-Surface Navigation
+
+```bash
+# Open multiple related pages
+cmux browser open https://app.example.com
+cmux browser open https://docs.example.com/api
+
+# Work with both surfaces
+cmux browser surface:1 navigate https://app.example.com/settings
+cmux browser surface:2 find text "Authentication"
+```
+
+## Error Handling
+
+### Invalid URL
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "invalid_params",
+    "message": "Invalid URL: not-a-url"
+  }
+}
+```
+
+### Surface Not Found
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "not_found",
+    "message": "Surface not found: surface:99"
+  }
+}
+```
+
+### Wrong Surface Type
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "invalid_params",
+    "message": "Surface surface:1 is not a browser (type: terminal)"
+  }
+}
+```
+
+### Load Timeout
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "timeout",
+    "message": "Page load timed out after 30000ms",
+    "url": "https://slow-site.example.com"
+  }
+}
+```
+
+## See Also
+
+- [Interaction Commands](/cli/browser/interaction) - Click, type, fill actions
+- [Automation Commands](/cli/browser/automation) - Wait for page states
+- [Snapshot Format](/cli/browser/snapshot) - Understanding refs and page structure

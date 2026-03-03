@@ -1,0 +1,229 @@
+---
+title: close-workspace
+description: Close a workspace and all its surfaces
+---
+
+## Syntax
+
+```bash
+cmux close-workspace --workspace <id|ref>
+```
+
+## Description
+
+Closes the specified workspace, terminating all surfaces (terminal sessions, browser panels, etc.) within it. This is a destructive operation that cannot be undone.
+
+## Options
+
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--workspace <id\|ref>` | Yes | The workspace to close (UUID or short ref like `workspace:2`) |
+| `--window <id>` | No | Target window (must appear before the command) |
+| `--json` | No | Output result in JSON format |
+| `--id-format` | No | Control ID output format: `refs` (default), `uuids`, or `both` |
+
+## Output Format
+
+### Text Output (default)
+
+Returns a success message:
+
+```
+OK workspace:2
+```
+
+### JSON Output
+
+Returns information about the closed workspace:
+
+```json
+{
+  "workspace_ref": "workspace:2",
+  "workspace_id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+}
+```
+
+## Workspace Identification
+
+You can identify workspaces using either:
+
+### Short References
+- `workspace:1` - First workspace in the window
+- `workspace:2` - Second workspace
+- etc.
+
+Get these from `list-workspaces` command.
+
+### UUIDs
+- Full workspace UUID (e.g., `6ba7b810-9dad-11d1-80b4-00c04fd430c8`)
+
+Get these from `list-workspaces --json --id-format uuids`.
+
+## Behavior
+
+- All surfaces in the workspace are terminated
+- Running processes in terminal surfaces are killed
+- If the closed workspace was selected, focus moves to another workspace
+- Short refs of remaining workspaces may change (e.g., closing `workspace:2` makes `workspace:3` become `workspace:2`)
+- If closing the last workspace in a window, behavior depends on window settings
+
+## Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `CMUX_WORKSPACE_ID` | Not used for this command (explicit `--workspace` required) |
+
+Unlike some other commands, `close-workspace` requires an explicit `--workspace` flag to prevent accidental closure.
+
+## Examples
+
+### Close a workspace by short reference
+
+```bash
+cmux close-workspace --workspace workspace:2
+```
+
+### Close using UUID
+
+```bash
+cmux close-workspace --workspace 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+```
+
+### Close with JSON output
+
+```bash
+cmux close-workspace --workspace workspace:3 --json
+```
+
+### Close workspace in a different window
+
+```bash
+cmux --window window:2 close-workspace --workspace workspace:1
+```
+
+### Close all but the first workspace
+
+```bash
+#!/bin/bash
+# Get all workspace refs except the first one
+cmux list-workspaces --json | \
+  jq -r '.workspaces[1:] | .[].ref' | \
+  while read -r ws; do
+    cmux close-workspace --workspace "$ws"
+  done
+```
+
+### Close workspaces by title pattern
+
+```bash
+#!/bin/bash
+# Close all workspaces with "test" in the title
+cmux list-workspaces --json | \
+  jq -r '.workspaces[] | select(.title | test("test"; "i")) | .ref' | \
+  while read -r ws; do
+    echo "Closing $ws"
+    cmux close-workspace --workspace "$ws"
+  done
+```
+
+### Interactive workspace closer
+
+```bash
+#!/bin/bash
+# Let user select which workspace to close
+echo "Available workspaces:"
+cmux list-workspaces
+
+echo -n "Enter workspace ref to close: "
+read -r ws_ref
+
+if [ -n "$ws_ref" ]; then
+  cmux close-workspace --workspace "$ws_ref"
+else
+  echo "No workspace specified"
+fi
+```
+
+### Cleanup old workspaces
+
+```bash
+#!/bin/bash
+# Close all workspaces except currently selected
+SELECTED=$(cmux list-workspaces --json | jq -r '.workspaces[] | select(.selected) | .ref')
+
+cmux list-workspaces --json | \
+  jq -r '.workspaces[] | select(.selected | not) | .ref' | \
+  while read -r ws; do
+    if [ "$ws" != "$SELECTED" ]; then
+      echo "Closing $ws"
+      cmux close-workspace --workspace "$ws"
+    fi
+  done
+```
+
+### Safe close with confirmation
+
+```bash
+#!/bin/bash
+# Close workspace with confirmation
+WORKSPACE="$1"
+
+if [ -z "$WORKSPACE" ]; then
+  echo "Usage: $0 <workspace-ref>"
+  exit 1
+fi
+
+# Get workspace details
+INFO=$(cmux list-workspaces --json | jq -r \
+  --arg ref "$WORKSPACE" \
+  '.workspaces[] | select(.ref == $ref) | "\(.ref): \(.title)"')
+
+if [ -z "$INFO" ]; then
+  echo "Workspace $WORKSPACE not found"
+  exit 1
+fi
+
+echo "About to close: $INFO"
+echo -n "Are you sure? [y/N] "
+read -r confirm
+
+if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
+  cmux close-workspace --workspace "$WORKSPACE"
+  echo "Workspace closed"
+else
+  echo "Cancelled"
+fi
+```
+
+## Warning
+
+Closing a workspace will:
+- **Terminate all running processes** in terminal surfaces
+- **Close all browser panels** without saving state
+- **Remove all surfaces** (panes, splits, etc.)
+- **Cannot be undone** - there is no "restore workspace" function
+
+Make sure to save any important work before closing a workspace.
+
+## Error Handling
+
+The command will fail if:
+- The `--workspace` flag is not provided
+- The specified workspace doesn't exist
+- The workspace ID/ref is invalid
+
+```bash
+$ cmux close-workspace --workspace workspace:99
+ERROR: Workspace not found
+
+$ cmux close-workspace
+ERROR: close-workspace requires --workspace
+```
+
+## Related Commands
+
+- [list-workspaces](/cli/workspaces/list) - View all workspaces
+- [new-workspace](/cli/workspaces/create) - Create a new workspace
+- [select-workspace](/cli/workspaces/select) - Switch to a workspace
+- [rename-workspace](/cli/workspaces/rename) - Change workspace title
+- [close-surface](/cli/surfaces/close) - Close a single surface within a workspace

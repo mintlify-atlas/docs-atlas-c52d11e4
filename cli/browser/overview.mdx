@@ -1,0 +1,229 @@
+---
+title: Browser Control Overview
+description: Control browser surfaces from the command line with agent-browser API compatibility
+---
+
+## Overview
+
+cmux provides comprehensive browser automation through the `cmux browser` command, implementing the [agent-browser](https://github.com/vercel-labs/agent-browser) API for LLM-friendly browser control.
+
+## Quick Start
+
+```bash
+# Open a new browser in a split
+cmux browser open https://example.com
+
+# Navigate an existing browser surface
+cmux browser surface:1 navigate https://github.com
+
+# Take a snapshot with element refs
+cmux browser surface:1 snapshot
+```
+
+## Surface Targeting
+
+All browser commands (except `open`) require targeting a specific browser surface:
+
+### Using Surface Handles
+
+```bash
+# By surface ref (recommended)
+cmux browser surface:1 navigate https://example.com
+
+# By UUID
+cmux browser 550e8400-e29b-41d4-a716-446655440000 back
+
+# Using --surface flag
+cmux browser --surface surface:2 reload
+```
+
+### Discovery
+
+Find browser surfaces in your workspace:
+
+```bash
+# List all surfaces
+cmux list-panels
+
+# Get current focus
+cmux identify --json
+
+# Browser-specific identify
+cmux browser identify --surface surface:1
+```
+
+## Surface Placement
+
+When opening a new browser, you can control where it appears:
+
+```bash
+# Open in caller's workspace (default behavior)
+cmux browser open https://example.com
+
+# Open in specific workspace
+cmux browser open --workspace workspace:1 https://example.com
+
+# Open in specific window
+cmux browser open --window window:1 https://example.com
+
+# Open split from existing surface
+cmux browser surface:1 open https://example.com
+```
+
+By default, `browser open` uses **caller-relative placement**: it reuses the nearest right sibling pane, or splits right from the caller pane if none exists.
+
+## Output Formats
+
+### JSON Output
+
+```bash
+cmux browser --json surface:1 snapshot
+```
+
+Returns structured data with:
+- `snapshot`: accessibility tree with element refs
+- `url`: current page URL
+- `title`: page title
+- Element refs (`@e1`, `@e2`, etc.)
+
+### Plain Text
+
+```bash
+cmux browser surface:1 get url
+# https://example.com
+
+cmux browser surface:1 get text "h1"
+# Welcome to Example Domain
+```
+
+## ID Format Options
+
+Control how handles are displayed:
+
+```bash
+# Show refs only (default)
+cmux browser --id-format refs surface:1 identify
+
+# Show UUIDs only
+cmux browser --id-format uuids surface:1 identify
+
+# Show both
+cmux browser --id-format both surface:1 identify
+```
+
+## Agent-Browser Compatibility
+
+The `cmux browser` API is designed for compatibility with agent-browser workflows:
+
+### Supported Command Families
+
+- **Navigation**: `navigate`, `back`, `forward`, `reload`
+- **Interaction**: `click`, `dblclick`, `hover`, `focus`, `type`, `fill`
+- **Form Controls**: `check`, `uncheck`, `select`, `press`
+- **Inspection**: `snapshot`, `get`, `is`, `find`
+- **Automation**: `eval`, `wait`, `scroll`, `screenshot`
+- **Session**: `cookies`, `dialog`, `download`, `frame`
+
+### Element Locators
+
+All element-targeting commands accept CSS selectors:
+
+```bash
+# By ID
+cmux browser surface:1 click "#submit-button"
+
+# By class
+cmux browser surface:1 fill ".search-input" "query text"
+
+# By attribute
+cmux browser surface:1 hover "[data-testid='menu']"
+```
+
+See [Interaction Commands](/cli/browser/interaction) for details.
+
+### Semantic Locators
+
+Use `find` commands for accessible, human-readable targeting:
+
+```bash
+# Find by ARIA role
+cmux browser surface:1 find role button --name "Sign In"
+
+# Find by text content
+cmux browser surface:1 find text "Welcome"
+
+# Find by label
+cmux browser surface:1 find label "Email address"
+```
+
+See [Automation Commands](/cli/browser/automation) for details.
+
+## Post-Action Snapshots
+
+Many commands support `--snapshot-after` to capture page state after execution:
+
+```bash
+cmux browser surface:1 click "button" --snapshot-after
+```
+
+Returns:
+- Action result (success/error)
+- `post_action_snapshot`: full page snapshot with refs
+- Updated URL and title
+
+## Multi-Surface Workflows
+
+```bash
+# Open multiple browsers
+cmux browser open https://app.example.com
+cmux browser open https://docs.example.com
+
+# Work with multiple surfaces
+cmux browser surface:1 navigate https://login.example.com
+cmux browser surface:1 fill "#username" "user@example.com"
+cmux browser surface:1 fill "#password" "secret"
+cmux browser surface:1 click "#login-button" --snapshot-after
+
+# Switch to documentation
+cmux browser surface:2 find text "API Reference"
+cmux browser surface:2 click "@e5"  # Click found element
+```
+
+## Error Handling
+
+All browser commands return structured errors:
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "not_found",
+    "message": "Element not found: #missing-button",
+    "selector": "#missing-button"
+  }
+}
+```
+
+Common error codes:
+- `invalid_params`: Missing or invalid parameters
+- `not_found`: Element or surface not found
+- `timeout`: Operation timed out
+- `invalid_state`: Operation not valid in current state
+- `not_supported`: Feature not available in WKWebView
+
+## Environment Variables
+
+```bash
+# Auto-target based on caller context
+export CMUX_WORKSPACE_ID=workspace:1
+export CMUX_SURFACE_ID=surface:2
+
+cmux browser navigate https://example.com  # Uses surface:2
+```
+
+## Next Steps
+
+- [Navigation Commands](/cli/browser/navigation) - Navigate, back, forward, reload
+- [Interaction Commands](/cli/browser/interaction) - Click, type, fill, press
+- [Automation Commands](/cli/browser/automation) - Eval, wait, find
+- [Snapshot Format](/cli/browser/snapshot) - Accessibility tree with refs

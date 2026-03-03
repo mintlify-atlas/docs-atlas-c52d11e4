@@ -1,0 +1,342 @@
+---
+title: "notification.mark_read"
+description: "Mark notifications as read (Future API)"
+---
+
+<Warning>
+  The `notification.mark_read` method is **not yet implemented** in the v2 socket API. This documentation describes the planned interface and behavior.
+</Warning>
+
+## Status
+
+Currently, notifications can only be marked as read through:
+
+1. **Automatic marking** - When user focuses the associated surface
+2. **UI interactions** - Clicking notifications in the panel
+3. **Keyboard shortcuts** - Using notification panel shortcuts
+
+A programmatic API method is planned for future release.
+
+## Planned Method Signature
+
+The method is expected to support multiple marking strategies:
+
+### Mark by Notification ID
+
+```json
+{
+  "id": "mark-1",
+  "method": "notification.mark_read",
+  "params": {
+    "notification_id": "550e8400-e29b-41d4-a716-446655440000"
+  }
+}
+```
+
+### Mark by Workspace
+
+```json
+{
+  "id": "mark-2",
+  "method": "notification.mark_read",
+  "params": {
+    "workspace_id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+  }
+}
+```
+
+### Mark by Surface
+
+```json
+{
+  "id": "mark-3",
+  "method": "notification.mark_read",
+  "params": {
+    "workspace_id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+    "surface_id": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e"
+  }
+}
+```
+
+### Mark All
+
+```json
+{
+  "id": "mark-4",
+  "method": "notification.mark_read",
+  "params": {
+    "all": true
+  }
+}
+```
+
+## Current Workarounds
+
+### Using UI Automation
+
+For test automation, you can simulate UI actions:
+
+```javascript
+// Focus workspace to auto-mark notifications as read
+await sendSocketRequest({
+  method: "workspace.select",
+  params: {
+    workspace_id: workspaceId
+  }
+});
+
+// Focus specific surface to mark its notifications
+await sendSocketRequest({
+  method: "surface.focus",
+  params: {
+    workspace_id: workspaceId,
+    surface_id: surfaceId
+  }
+});
+```
+
+### Existing Internal Methods
+
+The internal Swift API has mark_read methods:
+
+From `Sources/TerminalNotificationStore.swift:222-262`:
+
+```swift
+// Mark single notification by ID
+func markRead(id: UUID) {
+    var updated = notifications
+    guard let index = updated.firstIndex(where: { $0.id == id }) else { return }
+    guard !updated[index].isRead else { return }
+    updated[index].isRead = true
+    notifications = updated
+    center.removeDeliveredNotifications(withIdentifiers: [id.uuidString])
+}
+
+// Mark all notifications for workspace
+func markRead(forTabId tabId: UUID) {
+    var updated = notifications
+    var idsToClear: [String] = []
+    for index in updated.indices {
+        if updated[index].tabId == tabId && !updated[index].isRead {
+            updated[index].isRead = true
+            idsToClear.append(updated[index].id.uuidString)
+        }
+    }
+    if !idsToClear.isEmpty {
+        notifications = updated
+        center.removeDeliveredNotifications(withIdentifiers: idsToClear)
+    }
+}
+
+// Mark all for specific surface
+func markRead(forTabId tabId: UUID, surfaceId: UUID?) {
+    var updated = notifications
+    var idsToClear: [String] = []
+    for index in updated.indices {
+        if updated[index].tabId == tabId,
+           updated[index].surfaceId == surfaceId,
+           !updated[index].isRead {
+            updated[index].isRead = true
+            idsToClear.append(updated[index].id.uuidString)
+        }
+    }
+    if !idsToClear.isEmpty {
+        notifications = updated
+        center.removeDeliveredNotifications(withIdentifiers: idsToClear)
+        center.removePendingNotificationRequests(withIdentifiers: idsToClear)
+    }
+}
+```
+
+These methods are used internally but not yet exposed via the v2 socket API.
+
+## isRead Field
+
+The `is_read` field is included in the response from `notification.list`:
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "workspace_id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+  "surface_id": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+  "is_read": false,
+  "title": "Build Complete",
+  "subtitle": "Success",
+  "body": "All tests passed"
+}
+```
+
+### Automatic Read Behavior
+
+Notifications are automatically marked as read when:
+
+1. **User focuses surface** - Switching to the panel with `Cmd+Number` or clicking
+2. **Workspace becomes active** - Selecting workspace in sidebar
+3. **Panel interaction** - Opening notification panel and viewing notification
+
+From `Sources/Workspace.swift:1460`:
+
+```swift
+AppDelegate.shared?.notificationStore?.markRead(forTabId: id, surfaceId: panelId)
+```
+
+From `Sources/TabManager.swift:1575`:
+
+```swift
+notificationStore.markRead(forTabId: tabId, surfaceId: panelId)
+```
+
+### Read Status Impact
+
+- **Dock badge** - Unread count decreases
+- **Workspace badges** - Per-workspace unread count updates
+- **Panel indicators** - Blue dot removed from notification
+- **System notifications** - Delivered notification removed from macOS notification center
+
+## Future Implementation
+
+The planned implementation would add this v2 method handler:
+
+```swift
+// In Sources/TerminalController.swift
+case "notification.mark_read":
+    return v2Result(id: id, self.v2NotificationMarkRead(params: params))
+
+private func v2NotificationMarkRead(params: [String: Any]) -> V2CallResult {
+    if let notificationId = v2UUID(params, "notification_id") {
+        DispatchQueue.main.sync {
+            TerminalNotificationStore.shared.markRead(id: notificationId)
+        }
+        return .ok(["marked": 1])
+    }
+    
+    if let all = params["all"] as? Bool, all {
+        var count = 0
+        DispatchQueue.main.sync {
+            count = TerminalNotificationStore.shared.notifications.filter { !$0.isRead }.count
+            TerminalNotificationStore.shared.markAllRead()
+        }
+        return .ok(["marked": count])
+    }
+    
+    if let workspaceId = v2UUID(params, "workspace_id") {
+        if let surfaceId = v2UUID(params, "surface_id") {
+            DispatchQueue.main.sync {
+                TerminalNotificationStore.shared.markRead(forTabId: workspaceId, surfaceId: surfaceId)
+            }
+        } else {
+            DispatchQueue.main.sync {
+                TerminalNotificationStore.shared.markRead(forTabId: workspaceId)
+            }
+        }
+        return .ok([:]) 
+    }
+    
+    return .err(code: "invalid_params", message: "Missing required parameters", data: nil)
+}
+```
+
+## Planned Response Format
+
+### Success Response
+
+```json
+{
+  "ok": true,
+  "result": {
+    "marked": 5
+  }
+}
+```
+
+<ResponseField name="marked" type="number">
+  Number of notifications marked as read
+</ResponseField>
+
+### Error Responses
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "not_found",
+    "message": "Notification not found",
+    "data": {
+      "notification_id": "invalid-uuid"
+    }
+  }
+}
+```
+
+## Use Cases for Future API
+
+### Mark After Processing
+
+```javascript
+// Get unread notifications
+const listResult = await sendSocketRequest({
+  method: "notification.list",
+  params: {}
+});
+
+const unread = listResult.result.notifications.filter(n => !n.is_read);
+
+// Process each
+for (const notif of unread) {
+  await processNotification(notif);
+  
+  // Mark as read after processing
+  await sendSocketRequest({
+    method: "notification.mark_read",
+    params: {
+      notification_id: notif.id
+    }
+  });
+}
+```
+
+### Bulk Mark by Workspace
+
+```javascript
+// Mark all notifications for workspace as read
+await sendSocketRequest({
+  method: "notification.mark_read",
+  params: {
+    workspace_id: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+  }
+});
+```
+
+### Mark All Read
+
+```javascript
+// Mark all notifications as read
+await sendSocketRequest({
+  method: "notification.mark_read",
+  params: {
+    all: true
+  }
+});
+```
+
+## Contributing
+
+If you need this API method, please:
+
+1. Open an issue at [github.com/manaflow-ai/cmux/issues](https://github.com/manaflow-ai/cmux/issues)
+2. Describe your use case
+3. Vote on existing feature requests
+
+The implementation priority will be determined by community demand.
+
+## Related Methods
+
+- [notification.create](/api/notifications/send) - Send a notification
+- [notification.list](/api/notifications/list) - List all notifications with read status
+- [notification.clear](/api/notifications/clear) - Clear all notifications
+
+## See Also
+
+- [Notification Feature Guide](/features/notifications)
+- [Socket API Reference](/configuration/socket-api)
+- [Keyboard Shortcuts](/keyboard-shortcuts/notifications)

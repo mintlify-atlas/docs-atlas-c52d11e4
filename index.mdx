@@ -1,97 +1,175 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Cmux Documentation"
+description: "A Ghostty-based macOS terminal with vertical tabs and notifications for AI coding agents"
+mode: "custom"
 ---
 
-## Setting up
+<div className="relative overflow-hidden bg-gradient-to-br from-[#29a9f9] via-[#7986f4] to-[#29a9f9] dark:from-[#1a4d73] dark:via-[#2d3a73] dark:to-[#1a4d73] py-20">
+  <div className="max-w-7xl mx-auto px-6 lg:px-8">
+    <div className="grid lg:grid-cols-12 gap-8 items-center">
+      <div className="lg:col-span-7">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
+          Terminal built for AI coding agents
+        </h1>
+        <p className="text-lg sm:text-xl text-white/90 max-w-2xl mb-8">
+          Cmux is a native macOS terminal with notification rings, vertical tabs, and an integrated browser — designed to keep you productive across multiple AI agent sessions.
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <a 
+            href="/quickstart" 
+            className="inline-flex items-center px-6 py-3 rounded-lg bg-white text-[#29a9f9] font-semibold hover:bg-white/90 transition-colors no-underline"
+          >
+            Get started
+          </a>
+          <a 
+            href="/cli/overview" 
+            className="inline-flex items-center px-6 py-3 rounded-lg border border-white/30 bg-white/10 text-white font-semibold hover:bg-white/20 transition-colors no-underline"
+          >
+            Explore CLI
+          </a>
+        </div>
+      </div>
+      <div className="lg:col-span-5 hidden lg:block">
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent rounded-2xl blur-2xl"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-Get your documentation site up and running in minutes.
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-3">
+    Get started
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Install cmux and start managing your AI agent workflows in minutes.
+  </p>
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+  <Steps>
+    <Step title="Install cmux">
+      Download the latest release from GitHub or install via Homebrew:
+      
+      ```bash
+      brew tap manaflow-ai/cmux
+      brew install --cask cmux
+      ```
+      
+      On first launch, macOS may ask you to confirm opening an app from an identified developer. Click **Open** to proceed.
+    </Step>
+    
+    <Step title="Create your first workspace">
+      Launch cmux and create a new workspace with `⌘ N` or from the CLI:
+      
+      ```bash
+      cmux new-workspace --cwd ~/projects/myproject
+      ```
+      
+      Workspaces appear as vertical tabs in the sidebar with git branch, working directory, and notification status.
+    </Step>
+    
+    <Step title="Set up notifications">
+      Wire up AI agent hooks so cmux can notify you when agents need input:
+      
+      ```bash
+      cmux notify --title "Claude Code" --body "Waiting for input"
+      ```
+      
+      When an agent sends a notification, its workspace tab lights up and the pane gets a blue ring. Press `⌘ Shift U` to jump to the latest unread notification.
+    </Step>
+  </Steps>
+</div>
 
-## Make it yours
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-3">
+    Core features
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Everything you need to manage multiple AI agent sessions efficiently.
+  </p>
 
-Design a docs site that looks great and empowers your users.
+  <CardGroup cols={2}>
+    <Card title="Notification system" icon="bell" href="/features/notifications">
+      Visual notification rings on panes and tabs, with a dedicated panel to see all pending notifications in one place.
+    </Card>
+    <Card title="Vertical tabs" icon="sidebar" href="/features/vertical-tabs">
+      Sidebar shows git branch, linked PR status, working directory, listening ports, and latest notification text for each workspace.
+    </Card>
+    <Card title="Integrated browser" icon="browser" href="/features/browser">
+      Split a browser alongside your terminal with a scriptable API ported from agent-browser for automation.
+    </Card>
+    <Card title="CLI & socket API" icon="terminal" href="/cli/overview">
+      Create workspaces, split panes, send keystrokes, and automate the browser via CLI or socket API.
+    </Card>
+  </CardGroup>
+</div>
 
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-3">
+    Integrations
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Wire cmux notifications into your AI coding agents.
+  </p>
 
-## Create beautiful pages
+  <CardGroup cols={3}>
+    <Card title="Claude Code" icon="robot" href="/integrations/claude-code">
+      Configure hooks to notify when Claude needs input or approval.
+    </Card>
+    <Card title="OpenCode" icon="code" href="/integrations/opencode">
+      Add plugins to send notifications on session idle or errors.
+    </Card>
+    <Card title="Codex" icon="terminal" href="/integrations/codex">
+      Set up notify commands to alert on turn completion.
+    </Card>
+  </CardGroup>
+</div>
 
-Everything you need to create world-class documentation.
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-3">
+    Documentation
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Explore features, keyboard shortcuts, CLI commands, and API reference.
+  </p>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+  <CardGroup cols={2}>
+    <Card title="Keyboard shortcuts" icon="keyboard" href="/keyboard-shortcuts/workspaces">
+      Master cmux with keyboard-first navigation across workspaces, splits, and the browser.
+    </Card>
+    <Card title="CLI reference" icon="terminal" href="/cli/overview">
+      Complete reference for all CLI commands: windows, workspaces, panes, surfaces, browser, and notifications.
+    </Card>
+    <Card title="API reference" icon="code" href="/api/system/identify">
+      Socket API methods for automation and scripting.
+    </Card>
+    <Card title="Configuration" icon="gear" href="/configuration/ghostty-config">
+      Configure Ghostty settings, socket access, and session restore.
+    </Card>
+  </CardGroup>
+</div>
 
-## Need inspiration?
-
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<div className="mt-20 mb-16 max-w-5xl mx-auto px-6">
+  <div className="rounded-2xl border border-gray-200 dark:border-[#27272a] bg-gray-50 dark:bg-[#1a1d27] p-8 sm:p-12">
+    <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-4">
+      Ready to get started?
+    </h2>
+    <p className="text-base text-gray-600 dark:text-gray-400 mb-6 max-w-2xl">
+      Install cmux and start managing your AI agent workflows with notifications, vertical tabs, and an integrated browser.
+    </p>
+    <div className="flex flex-wrap gap-4">
+      <a 
+        href="/quickstart" 
+        className="inline-flex items-center px-6 py-3 rounded-lg bg-[#29a9f9] text-white font-semibold hover:bg-[#2090d9] transition-colors no-underline"
+      >
+        Get started
+      </a>
+      <a 
+        href="https://github.com/manaflow-ai/cmux" 
+        className="inline-flex items-center px-6 py-3 rounded-lg border border-gray-300 dark:border-[#27272a] bg-white dark:bg-[#242838] text-gray-900 dark:text-gray-100 font-semibold hover:bg-gray-100 dark:hover:bg-[#2d3142] transition-colors no-underline"
+      >
+        View on GitHub
+      </a>
+    </div>
+  </div>
+</div>

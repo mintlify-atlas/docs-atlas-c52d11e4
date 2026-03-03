@@ -1,0 +1,221 @@
+---
+title: "Clear Notifications"
+description: "Clear all notifications in cmux"
+---
+
+The `clear-notifications` command removes all notifications from cmux's notification panel and history.
+
+## Syntax
+
+```bash
+cmux clear-notifications
+```
+
+## Description
+
+This command clears:
+- All notifications in the notification panel
+- Notification history
+- Both read and unread notifications
+
+The operation is immediate and cannot be undone.
+
+## Examples
+
+### Basic Usage
+
+```bash
+# Clear all notifications
+cmux clear-notifications
+```
+
+### Conditional Clear
+
+```bash
+# Clear if more than 10 notifications exist
+if [ $(cmux list-notifications --json | jq 'length') -gt 10 ]; then
+    cmux clear-notifications
+fi
+```
+
+### Clear Before Starting Task
+
+```bash
+#!/bin/bash
+# Clean slate before long-running task
+
+command -v cmux &>/dev/null && cmux clear-notifications
+
+# Run build
+make all
+
+# Notify when done
+cmux notify --title "Build Complete" --body "Make finished successfully"
+```
+
+### From Python
+
+```python
+import subprocess
+
+def clear_notifications():
+    """Clear all cmux notifications."""
+    try:
+        subprocess.run(
+            ["cmux", "clear-notifications"],
+            check=True,
+            capture_output=True
+        )
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+# Usage
+if clear_notifications():
+    print("Notifications cleared")
+```
+
+### Interactive Confirmation
+
+```bash
+#!/bin/bash
+# Prompt before clearing
+
+COUNT=$(cmux list-notifications --json | jq 'length')
+
+if [ "$COUNT" -gt 0 ]; then
+    echo "You have $COUNT notification(s)"
+    read -p "Clear all? (y/n): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        cmux clear-notifications
+        echo "Cleared $COUNT notification(s)"
+    fi
+fi
+```
+
+## Use Cases
+
+### Cleanup Scripts
+
+```bash
+#!/bin/bash
+# Daily cleanup script
+
+# Archive old notifications to file before clearing
+cmux list-notifications --json > ~/notifications-$(date +%Y%m%d).json
+
+# Clear cmux panel
+cmux clear-notifications
+
+echo "Notifications archived and cleared"
+```
+
+### Test Automation
+
+```bash
+#!/bin/bash
+# Clear before running tests to get clean notification state
+
+cmux clear-notifications
+
+# Run tests that generate notifications
+pytest tests/
+
+# Check that expected notifications were created
+NOTIFS=$(cmux list-notifications --json)
+if echo "$NOTIFS" | jq -e '.[] | select(.title == "Test Complete")' > /dev/null; then
+    echo "Test notifications verified"
+else
+    echo "Expected notification not found"
+    exit 1
+fi
+```
+
+### Agent Hook Reset
+
+```bash
+#!/bin/bash
+# Reset notification state before starting agent session
+
+if command -v cmux &>/dev/null; then
+    # Clear old notifications
+    cmux clear-notifications
+    
+    # Send session start notification
+    cmux notify --title "Agent Session" --body "Starting new session"
+fi
+
+# Start agent
+codex
+```
+
+## Implementation Details
+
+### Protocol
+
+The `clear-notifications` command sends a v1 socket command:
+
+```
+clear_notifications
+```
+
+The server removes all notification records and returns a success message.
+
+From `CLI/cmux.swift:1307-1309`:
+
+```swift
+case "clear-notifications":
+    let response = try sendV1Command("clear_notifications", client: client)
+    print(response)
+```
+
+### Return Value
+
+The command prints the server response (typically "OK") to stdout and exits with code 0 on success.
+
+On error, it prints an error message to stderr and exits with non-zero code.
+
+## Behavior
+
+- **Atomic operation** - All notifications cleared at once
+- **No confirmation** - Executes immediately without prompting
+- **No undo** - Cleared notifications cannot be recovered
+- **Silent operation** - Only outputs response message
+- **Fast execution** - Typically completes in milliseconds
+
+## Best Practices
+
+1. **Archive before clearing** - Use `list-notifications --json` to save history
+2. **Add to cleanup scripts** - Keep notification panel tidy
+3. **Clear in tests** - Start with clean state for test isolation
+4. **Prompt in interactive scripts** - Confirm with user before clearing
+5. **Check availability** - Use `command -v cmux` before calling
+
+## Error Handling
+
+```bash
+# Robust error handling
+if command -v cmux &>/dev/null; then
+    if cmux clear-notifications 2>&1; then
+        echo "Notifications cleared"
+    else
+        echo "Failed to clear notifications" >&2
+        exit 1
+    fi
+else
+    echo "cmux not available" >&2
+    exit 1
+fi
+```
+
+## Related Commands
+
+- [notify](/cli/notifications/send) - Send a notification
+- [list-notifications](/cli/notifications/list) - List all notifications
+
+## See Also
+
+- [Features: Notifications](/features/notifications)
+- [Environment Variables](/cli/overview#environment-variables)
+- [Socket API Configuration](/configuration/socket-api)

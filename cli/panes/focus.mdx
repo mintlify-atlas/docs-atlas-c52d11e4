@@ -1,0 +1,149 @@
+---
+title: "focus-pane"
+description: "Focus a specific pane in the workspace"
+---
+
+Focus the specified pane, making it the active pane for keyboard input. Panes are containers that hold surfaces (tabs).
+
+## Usage
+
+```bash
+cmux focus-pane [--pane <id|ref> | <id|ref>] [flags]
+```
+
+## Flags
+
+<ParamField path="--pane" type="string" required>
+  Pane to focus (required unless passed positionally)
+</ParamField>
+
+<ParamField path="--workspace" type="string">
+  Workspace context (default: `$CMUX_WORKSPACE_ID`)
+</ParamField>
+
+## Handle-Based Targeting
+
+Panes can be targeted using handle references:
+
+- `pane:1` - First pane (by index)
+- `pane:2` - Second pane
+- UUID format: `abc123-def456-...` (use `--id-format uuids`)
+
+Find pane handles using:
+
+```bash
+cmux list-panes
+```
+
+Output:
+```
+* pane:1  [2 surfaces]  [focused]
+  pane:2  [1 surface]
+```
+
+## Positional vs Flag Syntax
+
+Both syntaxes are supported:
+
+```bash
+# Using --pane flag
+cmux focus-pane --pane pane:2
+
+# Positional argument
+cmux focus-pane pane:2
+```
+
+## JSON Output
+
+With `--json` flag:
+
+```json
+{
+  "pane_ref": "pane:2",
+  "pane_id": "uuid-here",
+  "workspace_ref": "workspace:1",
+  "workspace_id": "uuid-here"
+}
+```
+
+## Examples
+
+### Focus a pane by reference
+
+```bash
+cmux focus-pane --pane pane:2
+```
+
+### Focus using positional syntax
+
+```bash
+cmux focus-pane pane:1
+```
+
+### Focus pane in specific workspace
+
+```bash
+cmux focus-pane --pane pane:1 --workspace workspace:2
+```
+
+### Focus with JSON output
+
+```bash
+cmux --json focus-pane pane:3
+```
+
+### Focus pane by UUID
+
+```bash
+cmux focus-pane abc123-def456-ghi789
+```
+
+### List then focus
+
+```bash
+# First, see available panes
+cmux list-panes
+
+# Then focus the desired pane
+cmux focus-pane pane:2
+```
+
+### Focus in a scripted workflow
+
+```bash
+#!/bin/bash
+# Create a new pane and focus it
+OUTPUT=$(cmux new-pane --direction down)
+PANE_REF=$(echo "$OUTPUT" | awk '{print $3}')  # Extract pane:N
+
+# The new pane is already focused, but demonstrate explicit focus:
+cmux focus-pane "$PANE_REF"
+
+# Now send commands to the focused pane
+cmux send -- npm start
+```
+
+## Focus Behavior
+
+When you focus a pane:
+
+1. The pane receives keyboard focus
+2. If the pane has multiple surfaces (tabs), the selected surface becomes active
+3. Keyboard input is routed to the focused pane's selected surface
+4. Visual indicators update to show the focused pane
+
+## Pane vs Surface Focus
+
+Understand the hierarchy:
+
+- **Pane**: Container level - use `focus-pane` to focus a split
+- **Surface**: Tab level - use `focus-panel` to focus a specific tab within a pane
+
+When you focus a pane, its selected surface automatically receives focus.
+
+## See Also
+
+- [list-panes](/cli/panes/list) - List all panes
+- [new-pane](/cli/panes/create) - Create a new pane
+- [focus-panel](/cli/surfaces/focus) - Focus a specific surface (tab)
+- [tree](/cli/system/tree) - View workspace hierarchy

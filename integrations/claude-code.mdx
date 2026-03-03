@@ -1,0 +1,102 @@
+---
+title: Claude Code Integration
+description: Configure Claude Code hooks to send cmux notifications
+---
+
+Claude Code supports hooks that can trigger notifications when waiting for user input or permissions.
+
+## Configuration
+
+Add to `~/.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "idle_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v cmux &>/dev/null && cmux notify --title 'Claude Code' --body 'Waiting for input' || osascript -e 'display notification \"Waiting for input\" with title \"Claude Code\"'"
+          }
+        ]
+      },
+      {
+        "matcher": "permission_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v cmux &>/dev/null && cmux notify --title 'Claude Code' --subtitle 'Permission' --body 'Approval needed' || osascript -e 'display notification \"Approval needed\" with title \"Claude Code\"'"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+## Setup Steps
+
+<Steps>
+  <Step title="Locate settings file">
+    Open or create `~/.claude/settings.json`
+  </Step>
+  
+  <Step title="Add hook configuration">
+    Copy the JSON configuration above into the settings file
+  </Step>
+  
+  <Step title="Restart Claude Code">
+    Restart Claude Code for the changes to take effect
+  </Step>
+  
+  <Step title="Test the integration">
+    Run a Claude Code session and verify notifications appear when Claude is idle or needs permissions
+  </Step>
+</Steps>
+
+## Hook Types
+
+### idle_prompt
+
+Triggered when Claude Code is waiting for user input. The notification includes:
+- **Title**: "Claude Code"
+- **Body**: "Waiting for input"
+
+### permission_prompt
+
+Triggered when Claude Code needs permission to execute commands. The notification includes:
+- **Title**: "Claude Code"
+- **Subtitle**: "Permission"
+- **Body**: "Approval needed"
+
+## Fallback Behavior
+
+The configuration includes automatic fallback:
+
+1. **cmux available** - Notifications appear in cmux panel with visual indicators
+2. **cmux not available** - Falls back to macOS system notifications via `osascript`
+
+## Visual Indicators
+
+When Claude Code sends a notification:
+- The terminal pane gets a **blue ring**
+- The workspace tab **lights up** in the sidebar
+- The notification appears in the **notifications panel** (⌘I)
+- Press **⌘⇧U** to jump to the most recent unread notification
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Notifications not appearing">
+    - Verify `~/.claude/settings.json` is valid JSON
+    - Check that Claude Code has been restarted
+    - Test the command manually: `cmux notify --title "Test" --body "Hello"`
+  </Accordion>
+  
+  <Accordion title="Fallback not working">
+    - Ensure you're on macOS (osascript requires macOS)
+    - Test osascript manually: `osascript -e 'display notification "Test" with title "Test"'`
+  </Accordion>
+</AccordionGroup>

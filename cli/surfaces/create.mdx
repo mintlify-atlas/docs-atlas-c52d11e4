@@ -1,0 +1,98 @@
+---
+title: new-surface
+description: Create a new surface in a pane
+---
+
+The `new-surface` command creates a new surface (panel) within a pane.
+
+## Terminology
+
+In cmux, **surface** and **panel** are synonymous terms. A surface is a UI element that displays content (terminal, browser, etc.) within a pane.
+
+## Usage
+
+```bash
+cmux new-surface [--type <type>] [--pane <id|ref>] [--url <url>] [--workspace <id|ref>]
+```
+
+## Options
+
+- `--type <type>` - Surface type (e.g., `terminal`, `browser`)
+- `--pane <id|ref>` - Target pane (defaults to focused pane in workspace)
+- `--url <url>` - URL for browser surfaces
+- `--workspace <id|ref>` - Target workspace (defaults to `$CMUX_WORKSPACE_ID`)
+- `--json` - Output in JSON format
+- `--id-format <refs|uuids|both>` - ID format for output (default: `refs`)
+
+## Targeting
+
+### Pane targeting
+
+Panes can be targeted by:
+- **UUID** - Full pane ID
+- **Ref** - Short reference (e.g., `pane:0`, `pane:1`)
+- **Index** - Numeric index within the workspace
+
+If `--pane` is not specified, the new surface is created in the focused pane.
+
+### Workspace targeting
+
+If `--workspace` is not specified, defaults to `$CMUX_WORKSPACE_ID` environment variable.
+
+## Surface Types
+
+- `terminal` - Terminal emulator surface
+- `browser` - Web browser surface (requires `--url`)
+
+## Output
+
+Returns the created surface ID, pane ID, and workspace ID.
+
+### Human-readable format
+
+```
+OK surface=surface:2 pane=pane:0 workspace=workspace:1
+```
+
+### JSON format
+
+```json
+{
+  "surface_ref": "surface:2",
+  "pane_ref": "pane:0",
+  "workspace_ref": "workspace:1"
+}
+```
+
+## Examples
+
+```bash
+# Create a new terminal surface in the focused pane
+cmux new-surface
+
+# Create a terminal surface in a specific pane
+cmux new-surface --type terminal --pane pane:1
+
+# Create a browser surface with a URL
+cmux new-surface --type browser --url https://example.com
+
+# Create a surface in a specific workspace and pane
+cmux new-surface --workspace workspace:2 --pane pane:0
+
+# Create a surface with JSON output
+cmux new-surface --json
+```
+
+## Notes
+
+- The new surface is created at the end of the pane's surface list
+- Use [reorder-surface](/cli/surfaces/reorder) to change the position within the pane
+- Use [move-surface](/cli/surfaces/move) to move the surface to a different pane
+
+## Related Commands
+
+- [list-panels](/cli/surfaces/list) - List surfaces
+- [close-surface](/cli/surfaces/close) - Close a surface
+- [move-surface](/cli/surfaces/move) - Move surface to different pane
+- [reorder-surface](/cli/surfaces/reorder) - Reorder surface within pane
+- [new-pane](/cli/panes/create) - Create a new pane with a surface

@@ -1,0 +1,111 @@
+---
+title: "list-panes"
+description: "List all panes in a workspace"
+---
+
+List all panes in a workspace. Panes are containers that hold one or more surfaces (tabs). Each workspace can have multiple panes arranged in a split layout.
+
+## Usage
+
+```bash
+cmux list-panes [--workspace <id|ref>]
+```
+
+## Flags
+
+<ParamField path="--workspace" type="string">
+  Workspace context (default: `$CMUX_WORKSPACE_ID`)
+</ParamField>
+
+## Pane vs Surface
+
+Understanding the distinction:
+
+- **Pane**: A container that can hold multiple surfaces (tabs). Panes are arranged in splits.
+- **Surface**: An individual terminal or browser instance within a pane. Multiple surfaces appear as tabs.
+
+Think of panes as split windows, and surfaces as tabs within those windows.
+
+## Handle-Based Targeting
+
+Panes are identified using handle references:
+
+- `pane:1` - First pane in the workspace
+- `pane:2` - Second pane in the workspace
+- UUID format also supported (use `--id-format` flag)
+
+## Output Format
+
+**Text Output** (default):
+
+```
+* pane:1  [2 surfaces]  [focused]
+  pane:2  [1 surface]
+```
+
+Indicators:
+- `*` - Currently focused pane
+- `[focused]` - Pane has keyboard focus
+- Surface count shows number of tabs in each pane
+
+**JSON Output** (with `--json` flag):
+
+```json
+{
+  "panes": [
+    {
+      "pane_ref": "pane:1",
+      "pane_id": "uuid-here",
+      "focused": true,
+      "surface_count": 2
+    },
+    {
+      "pane_ref": "pane:2",
+      "pane_id": "uuid-here",
+      "focused": false,
+      "surface_count": 1
+    }
+  ]
+}
+```
+
+## Examples
+
+### List panes in current workspace
+
+```bash
+cmux list-panes
+```
+
+Uses `$CMUX_WORKSPACE_ID` from your shell environment.
+
+### List panes in specific workspace
+
+```bash
+cmux list-panes --workspace workspace:2
+```
+
+### Get JSON output
+
+```bash
+cmux --json list-panes
+```
+
+### Get UUIDs instead of refs
+
+```bash
+cmux --json --id-format uuids list-panes
+```
+
+### Get both refs and UUIDs
+
+```bash
+cmux --json --id-format both list-panes
+```
+
+## See Also
+
+- [list-pane-surfaces](/api/pane/surfaces) - List surfaces within a pane
+- [focus-pane](/cli/panes/focus) - Focus a specific pane
+- [new-pane](/cli/panes/create) - Create a new pane
+- [tree](/cli/system/tree) - Show full workspace hierarchy

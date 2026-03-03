@@ -1,0 +1,260 @@
+---
+title: system.ping
+description: Test socket connectivity and verify cmux is responsive
+---
+
+The `system.ping` method checks if the cmux socket server is running and responsive. It returns immediately with a simple acknowledgment.
+
+## Request Format
+
+```json
+{
+  "id": "ping-1",
+  "method": "system.ping",
+  "params": {}
+}
+```
+
+## Parameters
+
+This method takes no parameters.
+
+## Response Format
+
+### Success Response
+
+```json
+{
+  "id": "ping-1",
+  "ok": true,
+  "result": {
+    "pong": true
+  }
+}
+```
+
+## Response Fields
+
+<ResponseField name="pong" type="boolean" required>
+  Always `true` when the server responds successfully
+</ResponseField>
+
+## Error Codes
+
+This method typically does not return application-level errors. Connection failures will result in socket-level errors (timeout, connection refused, etc.).
+
+| Code | Description |
+|------|-------------|
+| `connection_timeout` | Socket connection timed out (client-side error) |
+| `connection_refused` | Socket not available at the specified path |
+
+## Examples
+
+### Basic Ping Request
+
+```bash
+# Via CLI
+cmux ping
+```
+
+```json
+// Via socket
+{"id":"1","method":"system.ping","params":{}}
+// Response: {"id":"1","ok":true,"result":{"pong":true}}
+```
+
+### Using with curl
+
+```bash
+# Send via Unix socket (using nc or socat)
+echo '{"id":"ping","method":"system.ping","params":{}}' | \
+  nc -U /tmp/cmux.sock
+```
+
+### Python Example
+
+```python
+import socket
+import json
+
+def ping_cmux(socket_path="/tmp/cmux.sock"):
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.connect(socket_path)
+    
+    request = {
+        "id": "ping",
+        "method": "system.ping",
+        "params": {}
+    }
+    
+    sock.sendall(json.dumps(request).encode() + b"\n")
+    response = sock.recv(8192).decode().strip()
+    sock.close()
+    
+    return json.loads(response)
+
+result = ping_cmux()
+print(result)  # {"id":"ping","ok":true,"result":{"pong":true}}
+```
+
+### Node.js Example
+
+```javascript
+const net = require('net');
+
+function pingCmux(socketPath = '/tmp/cmux.sock') {
+  return new Promise((resolve, reject) => {
+    const client = net.createConnection(socketPath);
+    
+    const request = {
+      id: 'ping',
+      method: 'system.ping',
+      params: {}
+    };
+    
+    client.on('connect', () => {
+      client.write(JSON.stringify(request) + '\n');
+    });
+    
+    client.on('data', (data) => {
+      const response = JSON.parse(data.toString().trim());
+      client.end();
+      resolve(response);
+    });
+    
+    client.on('error', reject);
+  });
+}
+
+pingCmux().then(result => {
+  console.log(result);  // {"id":"ping","ok":true,"result":{"pong":true}}
+});
+```
+
+## Use Cases
+
+### Health Check
+
+Verify cmux is running before executing other commands:
+
+```bash
+#!/bin/bash
+if cmux ping &>/dev/null; then
+  echo "cmux is running"
+  cmux list-workspaces
+else
+  echo "cmux is not running or socket is unavailable"
+  exit 1
+fi
+```
+
+### Connection Validation
+
+Test socket connectivity in automation scripts:
+
+```python
+import socket
+import json
+import time
+
+def wait_for_cmux(socket_path="/tmp/cmux.sock", timeout=10):
+    """Wait for cmux socket to become available."""
+    start = time.time()
+    while time.time() - start < timeout:
+        try:
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sock.settimeout(1.0)
+            sock.connect(socket_path)
+            
+            request = json.dumps({"id":"ping","method":"system.ping","params":{}}) + "\n"
+            sock.sendall(request.encode())
+            response = sock.recv(8192).decode().strip()
+            sock.close()
+            
+            data = json.loads(response)
+            if data.get("ok") and data.get("result", {}).get("pong"):
+                return True
+        except (socket.error, json.JSONDecodeError):
+            time.sleep(0.5)
+    return False
+
+if wait_for_cmux():
+    print("cmux is ready")
+else:
+    print("cmux failed to start")
+```
+
+### Monitoring Integration
+
+Integrate with monitoring systems:
+
+```bash
+# Nagios/Icinga check script
+#!/bin/bash
+if timeout 2 cmux ping &>/dev/null; then
+  echo "OK - cmux socket responding"
+  exit 0
+else
+  echo "CRITICAL - cmux socket not responding"
+  exit 2
+fi
+```
+
+## Implementation Notes
+
+From `Sources/TerminalController.swift:1180-1181`:
+
+- The method immediately returns `{"pong": true}` without any state inspection
+- No authentication required (even in restricted socket modes)
+- No main thread synchronization needed
+- Response is deterministic and lightweight
+- Suitable for high-frequency health checks
+
+## Socket Communication Format
+
+All v2 socket commands follow this protocol:
+
+1. **Request**: JSON object with `id`, `method`, and `params` fields, terminated by newline (`\n`)
+2. **Response**: JSON object with `id`, `ok`, and either `result` or `error`, terminated by newline
+3. **Transport**: Unix domain socket (default: `/tmp/cmux.sock`)
+4. **Encoding**: UTF-8
+
+### Request Structure
+
+```json
+{
+  "id": "<unique-request-id>",
+  "method": "<method-name>",
+  "params": { /* method-specific parameters */ }
+}
+```
+
+### Success Response Structure
+
+```json
+{
+  "id": "<matching-request-id>",
+  "ok": true,
+  "result": { /* method-specific result */ }
+}
+```
+
+### Error Response Structure
+
+```json
+{
+  "id": "<matching-request-id>",
+  "ok": false,
+  "error": {
+    "code": "<error-code>",
+    "message": "<human-readable-message>",
+    "data": { /* optional error details */ }
+  }
+}
+```
+
+## Related Methods
+
+- [system.capabilities](/api/system/capabilities) - Query supported methods and features
+- [system.identify](/api/system/identify) - Get current context information
+- [System Tree](/cli/system/tree) - View full window/workspace hierarchy

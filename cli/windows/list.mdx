@@ -1,0 +1,107 @@
+---
+title: list-windows
+description: List all open windows
+---
+
+Lists all open windows in the cmux application.
+
+## Usage
+
+```bash
+cmux list-windows [--json]
+```
+
+## Flags
+
+<ParamField path="--json" type="flag">
+  Output in JSON format
+</ParamField>
+
+## Output Format
+
+### Default Output
+
+The default output shows windows in a human-readable format:
+
+```
+* 0: window-id-1 selected_workspace=workspace-id-1 workspaces=3
+  1: window-id-2 selected_workspace=workspace-id-2 workspaces=2
+  2: window-id-3 selected_workspace=none workspaces=0
+```
+
+Each line contains:
+- `*` prefix indicates the key (focused) window
+- Index number followed by colon
+- Window ID
+- Selected workspace ID (or "none")
+- Number of workspaces in the window
+
+### JSON Output
+
+With `--json`, the output is an array of window objects:
+
+```json
+[
+  {
+    "index": 0,
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "key": true,
+    "selected_workspace_id": "660e8400-e29b-41d4-a716-446655440001",
+    "workspace_count": 3
+  },
+  {
+    "index": 1,
+    "id": "770e8400-e29b-41d4-a716-446655440002",
+    "key": false,
+    "selected_workspace_id": "880e8400-e29b-41d4-a716-446655440003",
+    "workspace_count": 2
+  },
+  {
+    "index": 2,
+    "id": "990e8400-e29b-41d4-a716-446655440004",
+    "key": false,
+    "selected_workspace_id": null,
+    "workspace_count": 0
+  }
+]
+```
+
+<ParamField path="index" type="integer">
+  Zero-based index of the window in the list
+</ParamField>
+
+<ParamField path="id" type="string">
+  Unique identifier for the window
+</ParamField>
+
+<ParamField path="key" type="boolean">
+  Whether this is the key (focused) window
+</ParamField>
+
+<ParamField path="selected_workspace_id" type="string | null">
+  ID of the currently selected workspace in this window, or null if no workspace is selected
+</ParamField>
+
+<ParamField path="workspace_count" type="integer">
+  Number of workspaces in this window
+</ParamField>
+
+## Examples
+
+### List windows in default format
+
+```bash
+cmux list-windows
+```
+
+### List windows in JSON format
+
+```bash
+cmux list-windows --json
+```
+
+## Related Commands
+
+- [new-window](/cli/windows/create) - Create a new window
+- [focus-window](/cli/windows/focus) - Focus a specific window
+- [close-window](/cli/windows/close) - Close a window

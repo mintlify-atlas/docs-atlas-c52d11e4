@@ -1,0 +1,303 @@
+---
+title: Integrated Browser
+description: Split browser panes alongside terminals with a scriptable API for agent automation
+---
+
+The cmux browser provides an integrated web view that you can split alongside your terminal, with a full scriptable API ported from [agent-browser](https://github.com/vercel-labs/agent-browser) for AI agent automation.
+
+<Frame>
+  <img src="/images/built-in-browser.png" alt="Built-in browser split alongside terminal" />
+</Frame>
+
+## Opening the Browser
+
+<CodeGroup>
+```bash Keyboard
+Cmd+Shift+L
+```
+
+```bash CLI
+cmux browser open-split <url>
+```
+</CodeGroup>
+
+The browser opens in a split pane next to your terminal, allowing you to:
+- View your dev server while coding
+- Test web applications in real-time
+- Automate browser interactions from AI agents
+
+## Browser Navigation
+
+<Tabs>
+  <Tab title="Keyboard Shortcuts">
+    | Shortcut | Action |
+    |----------|--------|
+    | `Cmd+L` | Focus address bar |
+    | `Cmd+[` | Back |
+    | `Cmd+]` | Forward |
+    | `Cmd+R` | Reload page |
+    | `Option+Cmd+I` | Toggle Developer Tools (Safari default) |
+    | `Option+Cmd+C` | Show JavaScript Console (Safari default) |
+  </Tab>
+
+  <Tab title="CLI Commands">
+    ```bash
+    # Navigate to URL
+    cmux browser navigate <url> --surface <surface-id>
+
+    # Go back/forward
+    cmux browser back --surface <surface-id>
+    cmux browser forward --surface <surface-id>
+
+    # Reload page
+    cmux browser reload --surface <surface-id>
+
+    # Get current URL
+    cmux browser url.get --surface <surface-id>
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+Browser shortcuts follow Safari defaults and are customizable in `Settings → Keyboard Shortcuts`.
+</Note>
+
+## Scriptable API
+
+The browser includes a full automation API based on [agent-browser](https://github.com/vercel-labs/agent-browser), enabling AI agents to interact with web pages programmatically.
+
+### Accessibility Tree Snapshot
+
+Get a snapshot of the page's accessibility tree with stable element references:
+
+```bash
+cmux browser snapshot --surface <surface-id>
+```
+
+Returns:
+- Accessibility tree structure
+- Element references (e.g., `@e1`, `@e2`)
+- Interactive elements (buttons, links, inputs)
+- Current page title and URL
+
+### Element Interactions
+
+<AccordionGroup>
+  <Accordion title="Clicking Elements">
+    ```bash
+    # Click an element by reference
+    cmux browser click @e5 --surface <surface-id>
+
+    # Double-click
+    cmux browser dblclick @e10 --surface <surface-id>
+
+    # Hover over element
+    cmux browser hover @e3 --surface <surface-id>
+    ```
+  </Accordion>
+
+  <Accordion title="Form Interactions">
+    ```bash
+    # Fill input field
+    cmux browser fill @e7 "search text" --surface <surface-id>
+
+    # Type text character by character
+    cmux browser type @e7 "username" --surface <surface-id>
+
+    # Check/uncheck checkbox
+    cmux browser check @e12 --surface <surface-id>
+    cmux browser uncheck @e12 --surface <surface-id>
+
+    # Select dropdown option
+    cmux browser select @e15 "Option 2" --surface <surface-id>
+    ```
+  </Accordion>
+
+  <Accordion title="Keyboard Input">
+    ```bash
+    # Press key
+    cmux browser press Enter --surface <surface-id>
+
+    # Key down/up events
+    cmux browser keydown Shift --surface <surface-id>
+    cmux browser keyup Shift --surface <surface-id>
+    ```
+  </Accordion>
+
+  <Accordion title="Scrolling">
+    ```bash
+    # Scroll page
+    cmux browser scroll 0 500 --surface <surface-id>
+
+    # Scroll element into view
+    cmux browser scroll-into-view @e20 --surface <surface-id>
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Getting Information
+
+```bash
+# Get element text
+cmux browser get.text @e5 --surface <surface-id>
+
+# Get HTML content
+cmux browser get.html @e5 --surface <surface-id>
+
+# Get input value
+cmux browser get.value @e7 --surface <surface-id>
+
+# Get attribute
+cmux browser get.attr @e5 href --surface <surface-id>
+
+# Get page title
+cmux browser get.title --surface <surface-id>
+
+# Get current URL
+cmux browser get.url --surface <surface-id>
+
+# Check element state
+cmux browser is.visible @e5 --surface <surface-id>
+cmux browser is.enabled @e5 --surface <surface-id>
+cmux browser is.checked @e12 --surface <surface-id>
+```
+
+### JavaScript Evaluation
+
+Execute arbitrary JavaScript in the page context:
+
+```bash
+cmux browser eval "document.title" --surface <surface-id>
+
+cmux browser eval "document.querySelector('#app').innerHTML" --surface <surface-id>
+```
+
+### Screenshots
+
+Capture screenshots of the browser view:
+
+```bash
+cmux browser screenshot /path/to/output.png --surface <surface-id>
+```
+
+### Waiting for Conditions
+
+```bash
+# Wait for selector to appear
+cmux browser wait "#submit-button" --surface <surface-id>
+
+# Wait for URL pattern
+cmux browser wait --url "*/success" --surface <surface-id>
+
+# Wait with timeout
+cmux browser wait "#element" --timeout 5000 --surface <surface-id>
+```
+
+## Finding Elements
+
+Use locator strategies to find elements:
+
+```bash
+# Find by role
+cmux browser find.role button --surface <surface-id>
+
+# Find by text
+cmux browser find.text "Submit" --surface <surface-id>
+
+# Find by label
+cmux browser find.label "Username" --surface <surface-id>
+
+# Find by placeholder
+cmux browser find.placeholder "Enter email" --surface <surface-id>
+
+# Find by test ID
+cmux browser find.testid "login-button" --surface <surface-id>
+
+# Get nth element
+cmux browser find.nth "button" 2 --surface <surface-id>
+```
+
+## Agent Workflow Example
+
+Typical workflow for AI agents automating browser tasks:
+
+<Steps>
+  <Step title="Identify Target Surface">
+    ```bash
+    cmux identify
+    ```
+    Get the current surface ID to target browser commands.
+  </Step>
+
+  <Step title="Navigate to Page">
+    ```bash
+    cmux browser navigate http://localhost:3000 --surface <surface-id>
+    ```
+  </Step>
+
+  <Step title="Snapshot Page">
+    ```bash
+    cmux browser snapshot --surface <surface-id>
+    ```
+    Get accessibility tree with element references.
+  </Step>
+
+  <Step title="Interact with Elements">
+    ```bash
+    cmux browser fill @e7 "test@example.com" --surface <surface-id>
+    cmux browser click @e10 --surface <surface-id>
+    ```
+  </Step>
+
+  <Step title="Verify Results">
+    ```bash
+    cmux browser wait "#success-message" --surface <surface-id>
+    cmux browser get.text @e15 --surface <surface-id>
+    ```
+  </Step>
+</Steps>
+
+## Browser Developer Tools
+
+The integrated browser provides Safari-compatible developer tools:
+
+- **Web Inspector** - `Option+Cmd+I`
+- **JavaScript Console** - `Option+Cmd+C`
+- Element inspector
+- Network monitoring
+- Console logs and errors
+
+## Split Pane Integration
+
+The browser is fully integrated with cmux's split pane system:
+
+```bash
+# Split browser right
+cmux browser open-split <url>
+
+# Focus browser pane
+cmux surface.focus <browser-surface-id>
+
+# Close browser
+cmux surface.close <browser-surface-id>
+```
+
+<Tip>
+You can have multiple browser panes open simultaneously, each with its own URL and state.
+</Tip>
+
+## API Compatibility
+
+The cmux browser API is based on [agent-browser](https://github.com/vercel-labs/agent-browser), which provides:
+
+- Stable element references across snapshots
+- LLM-friendly accessibility tree format
+- Common automation commands (click, fill, type, etc.)
+- Full JavaScript evaluation capabilities
+
+For detailed API documentation, see the [Browser API Reference](/api/browser/overview).
+
+<Card title="Related" icon="link">
+  - [Split Panes](/features/split-panes) - Manage browser and terminal splits
+  - [API Reference](/api/browser/overview) - Complete browser API documentation
+</Card>

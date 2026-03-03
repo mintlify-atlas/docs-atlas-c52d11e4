@@ -1,0 +1,457 @@
+---
+title: system.identify
+description: Retrieve focused window, workspace, pane, and surface context
+---
+
+The `system.identify` method returns information about the currently focused context and optionally validates a caller-provided location. This is essential for agent discovery and context-aware automation.
+
+## Request Format
+
+```json
+{
+  "id": "identify-1",
+  "method": "system.identify",
+  "params": {
+    "caller": {
+      "workspace_id": "<workspace-uuid>",
+      "surface_id": "<surface-uuid>"
+    }
+  }
+}
+```
+
+## Parameters
+
+<ParamField path="caller" type="object" optional>
+  Optional caller context to validate. When provided, the server validates the workspace and surface exist and returns enriched caller information.
+  
+  <ParamField path="caller.workspace_id" type="string" optional>
+    UUID of the workspace the caller is running in
+  </ParamField>
+  
+  <ParamField path="caller.surface_id" type="string" optional>
+    UUID of the surface the caller is running in
+  </ParamField>
+</ParamField>
+
+## Response Format
+
+### Success Response
+
+```json
+{
+  "id": "identify-1",
+  "ok": true,
+  "result": {
+    "socket_path": "/tmp/cmux.sock",
+    "focused": {
+      "window_id": "F8A3C2E1-...",
+      "window_ref": "window:1",
+      "workspace_id": "A1B2C3D4-...",
+      "workspace_ref": "workspace:2",
+      "pane_id": "D5E6F7A8-...",
+      "pane_ref": "pane:1",
+      "surface_id": "C9D0E1F2-...",
+      "surface_ref": "surface:3",
+      "tab_id": "C9D0E1F2-...",
+      "tab_ref": "tab:3",
+      "surface_type": "terminal",
+      "is_browser_surface": false
+    },
+    "caller": {
+      "window_id": "F8A3C2E1-...",
+      "window_ref": "window:1",
+      "workspace_id": "A1B2C3D4-...",
+      "workspace_ref": "workspace:2",
+      "pane_id": "D5E6F7A8-...",
+      "pane_ref": "pane:1",
+      "surface_id": "C9D0E1F2-...",
+      "surface_ref": "surface:3",
+      "tab_id": "C9D0E1F2-...",
+      "tab_ref": "tab:3",
+      "surface_type": "terminal",
+      "is_browser_surface": false
+    }
+  }
+}
+```
+
+## Response Fields
+
+<ResponseField name="socket_path" type="string" required>
+  Path to the Unix socket used for communication
+</ResponseField>
+
+<ResponseField name="focused" type="object" required>
+  Currently focused context in the active window
+  
+  <ResponseField name="focused.window_id" type="string">
+    UUID of the focused window
+  </ResponseField>
+  
+  <ResponseField name="focused.window_ref" type="string">
+    Human-readable window reference (e.g., `window:1`)
+  </ResponseField>
+  
+  <ResponseField name="focused.workspace_id" type="string">
+    UUID of the focused workspace
+  </ResponseField>
+  
+  <ResponseField name="focused.workspace_ref" type="string">
+    Human-readable workspace reference (e.g., `workspace:2`)
+  </ResponseField>
+  
+  <ResponseField name="focused.pane_id" type="string">
+    UUID of the focused pane (null if no pane is focused)
+  </ResponseField>
+  
+  <ResponseField name="focused.pane_ref" type="string">
+    Human-readable pane reference (e.g., `pane:1`)
+  </ResponseField>
+  
+  <ResponseField name="focused.surface_id" type="string">
+    UUID of the focused surface
+  </ResponseField>
+  
+  <ResponseField name="focused.surface_ref" type="string">
+    Human-readable surface reference (e.g., `surface:3`)
+  </ResponseField>
+  
+  <ResponseField name="focused.tab_id" type="string">
+    Legacy alias for `surface_id`
+  </ResponseField>
+  
+  <ResponseField name="focused.tab_ref" type="string">
+    Legacy alias for `surface_ref` (e.g., `tab:3`)
+  </ResponseField>
+  
+  <ResponseField name="focused.surface_type" type="string">
+    Type of surface: `"terminal"` or `"browser"`
+  </ResponseField>
+  
+  <ResponseField name="focused.is_browser_surface" type="boolean">
+    `true` if the surface is a browser panel, `false` for terminal
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="caller" type="object|null">
+  Validated caller context when `params.caller` is provided. Returns `null` if no caller information was provided or if the caller context is invalid.
+  
+  Contains the same fields as `focused` but for the caller's context.
+</ResponseField>
+
+## Error Codes
+
+This method typically returns success with `null` values for missing contexts rather than throwing errors.
+
+| Code | Description |
+|------|-------------|
+| `invalid_params` | Malformed caller object or invalid UUIDs |
+| `not_found` | Workspace or surface specified in caller does not exist |
+
+## Examples
+
+### Basic Identify (No Caller)
+
+```bash
+# Via CLI
+cmux identify
+```
+
+```json
+// Via socket
+{"id":"1","method":"system.identify","params":{}}
+```
+
+Response:
+```json
+{
+  "id": "1",
+  "ok": true,
+  "result": {
+    "socket_path": "/tmp/cmux.sock",
+    "focused": {
+      "window_id": "ABC123...",
+      "window_ref": "window:1",
+      "workspace_id": "DEF456...",
+      "workspace_ref": "workspace:1",
+      "pane_id": "GHI789...",
+      "pane_ref": "pane:1",
+      "surface_id": "JKL012...",
+      "surface_ref": "surface:1",
+      "tab_id": "JKL012...",
+      "tab_ref": "tab:1",
+      "surface_type": "terminal",
+      "is_browser_surface": false
+    },
+    "caller": null
+  }
+}
+```
+
+### Identify with Caller Context
+
+```json
+{
+  "id": "2",
+  "method": "system.identify",
+  "params": {
+    "caller": {
+      "workspace_id": "A1B2C3D4-5E6F-7A8B-9C0D-E1F2A3B4C5D6",
+      "surface_id": "F7E8D9C0-B1A2-3456-7890-ABCDEF123456"
+    }
+  }
+}
+```
+
+Response:
+```json
+{
+  "id": "2",
+  "ok": true,
+  "result": {
+    "socket_path": "/tmp/cmux.sock",
+    "focused": {
+      "window_id": "...",
+      "workspace_id": "...",
+      "surface_id": "..."
+    },
+    "caller": {
+      "window_id": "F8A3C2E1-...",
+      "window_ref": "window:1",
+      "workspace_id": "A1B2C3D4-5E6F-7A8B-9C0D-E1F2A3B4C5D6",
+      "workspace_ref": "workspace:2",
+      "pane_id": "D5E6F7A8-...",
+      "pane_ref": "pane:1",
+      "surface_id": "F7E8D9C0-B1A2-3456-7890-ABCDEF123456",
+      "surface_ref": "surface:3",
+      "tab_id": "F7E8D9C0-B1A2-3456-7890-ABCDEF123456",
+      "tab_ref": "tab:3",
+      "surface_type": "terminal",
+      "is_browser_surface": false
+    }
+  }
+}
+```
+
+### Python Example
+
+```python
+import socket
+import json
+import os
+
+def identify_context(socket_path="/tmp/cmux.sock", caller=None):
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.connect(socket_path)
+    
+    params = {}
+    if caller:
+        params["caller"] = caller
+    
+    request = {
+        "id": "identify",
+        "method": "system.identify",
+        "params": params
+    }
+    
+    sock.sendall(json.dumps(request).encode() + b"\n")
+    response = sock.recv(8192).decode().strip()
+    sock.close()
+    
+    return json.loads(response)
+
+# Basic usage
+context = identify_context()
+print(f"Focused workspace: {context['result']['focused']['workspace_ref']}")
+
+# With caller from environment variables
+caller_info = None
+if os.getenv("CMUX_WORKSPACE_ID") and os.getenv("CMUX_SURFACE_ID"):
+    caller_info = {
+        "workspace_id": os.getenv("CMUX_WORKSPACE_ID"),
+        "surface_id": os.getenv("CMUX_SURFACE_ID")
+    }
+
+context = identify_context(caller=caller_info)
+if context['result']['caller']:
+    print(f"Called from: {context['result']['caller']['surface_ref']}")
+```
+
+### Node.js Example
+
+```javascript
+const net = require('net');
+
+function identify(socketPath = '/tmp/cmux.sock', caller = null) {
+  return new Promise((resolve, reject) => {
+    const client = net.createConnection(socketPath);
+    
+    const params = caller ? { caller } : {};
+    const request = {
+      id: 'identify',
+      method: 'system.identify',
+      params
+    };
+    
+    client.on('connect', () => {
+      client.write(JSON.stringify(request) + '\n');
+    });
+    
+    client.on('data', (data) => {
+      const response = JSON.parse(data.toString().trim());
+      client.end();
+      resolve(response);
+    });
+    
+    client.on('error', reject);
+  });
+}
+
+// Basic usage
+identify().then(result => {
+  const focused = result.result.focused;
+  console.log(`Focused: ${focused.workspace_ref} / ${focused.surface_ref}`);
+});
+
+// With caller from environment
+const caller = process.env.CMUX_WORKSPACE_ID && process.env.CMUX_SURFACE_ID
+  ? {
+      workspace_id: process.env.CMUX_WORKSPACE_ID,
+      surface_id: process.env.CMUX_SURFACE_ID
+    }
+  : null;
+
+identify('/tmp/cmux.sock', caller).then(result => {
+  if (result.result.caller) {
+    console.log(`Caller: ${result.result.caller.surface_ref}`);
+  }
+});
+```
+
+## Use Cases
+
+### Agent Discovery
+
+Agents can discover their execution context:
+
+```python
+import os
+import json
+import socket
+
+def discover_agent_context():
+    """Discover where the agent is running."""
+    workspace_id = os.getenv("CMUX_WORKSPACE_ID")
+    surface_id = os.getenv("CMUX_SURFACE_ID")
+    
+    if not workspace_id or not surface_id:
+        raise RuntimeError("Not running in a cmux terminal")
+    
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.connect("/tmp/cmux.sock")
+    
+    request = json.dumps({
+        "id": "discover",
+        "method": "system.identify",
+        "params": {
+            "caller": {
+                "workspace_id": workspace_id,
+                "surface_id": surface_id
+            }
+        }
+    }) + "\n"
+    
+    sock.sendall(request.encode())
+    response = json.loads(sock.recv(8192).decode().strip())
+    sock.close()
+    
+    return response["result"]["caller"]
+
+context = discover_agent_context()
+print(f"Running in {context['workspace_ref']}, surface {context['surface_ref']}")
+print(f"Surface type: {context['surface_type']}")
+```
+
+### Multi-Surface Coordination
+
+Coordinate actions across multiple surfaces:
+
+```bash
+#!/bin/bash
+# Get current context
+CONTEXT=$(cmux identify --workspace $CMUX_WORKSPACE_ID --surface $CMUX_SURFACE_ID)
+MY_SURFACE=$(echo $CONTEXT | jq -r '.caller.surface_id')
+WORKSPACE=$(echo $CONTEXT | jq -r '.caller.workspace_id')
+
+# Find focused surface in the same workspace
+FOCUSED=$(cmux identify | jq -r '.focused.surface_id')
+
+if [ "$MY_SURFACE" != "$FOCUSED" ]; then
+  # Send output to focused surface instead
+  echo "Task complete" | cmux send --surface $FOCUSED
+fi
+```
+
+### Browser vs Terminal Detection
+
+```javascript
+const { execSync } = require('child_process');
+
+function isBrowserSurface() {
+  const result = JSON.parse(
+    execSync('cmux identify --workspace $CMUX_WORKSPACE_ID --surface $CMUX_SURFACE_ID').toString()
+  );
+  return result.caller?.is_browser_surface === true;
+}
+
+if (isBrowserSurface()) {
+  console.log('Running in a browser surface');
+  // Use browser automation APIs
+} else {
+  console.log('Running in a terminal surface');
+  // Use terminal-based interactions
+}
+```
+
+## Implementation Notes
+
+From `Sources/TerminalController.swift:1750-1834`:
+
+- The `focused` object always reflects the currently active window/workspace/pane/surface
+- The `caller` object is populated only when `params.caller` is provided
+- Caller validation checks if the workspace and surface exist before returning enriched data
+- Both UUID (`*_id`) and human-readable ref (`*_ref`) formats are returned
+- Runs on main thread to ensure synchronous snapshot of current state
+- Returns `null` values for missing context instead of throwing errors
+
+## Focused vs Caller Context
+
+### Focused Context
+
+The `focused` object represents the **currently active** context in the cmux UI:
+- Which window has keyboard focus
+- Which workspace tab is selected
+- Which pane is focused
+- Which surface (terminal/browser) is active
+
+### Caller Context
+
+The `caller` object represents **where the API call originated from**:
+- Typically populated from `CMUX_WORKSPACE_ID` and `CMUX_SURFACE_ID` environment variables
+- Used by agents running inside a terminal to identify their own location
+- Allows automation scripts to be workspace/surface-aware
+- Can differ from `focused` if the script is running in a background surface
+
+**Example scenario:**
+- Workspace 1 has surfaces A (focused) and B (background)
+- Script running in surface B calls `system.identify`
+- `focused` shows surface A (what the user sees)
+- `caller` shows surface B (where the script is running)
+
+## Related Methods
+
+- [system.capabilities](/api/system/capabilities) - Query supported features
+- [system.ping](/api/system/ping) - Test socket connectivity
+- [System Tree](/cli/system/tree) - Get full hierarchy with all workspaces
+- [workspace.list](/api/workspace/list) - List all workspaces

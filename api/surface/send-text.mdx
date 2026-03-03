@@ -1,0 +1,160 @@
+---
+title: surface.send_text
+description: Send text input to a terminal surface
+---
+
+Sends text to a terminal surface as if it were typed on the keyboard. Text is sent to the terminal's shell or running process.
+
+## Method
+
+```
+surface.send_text
+```
+
+## Parameters
+
+<ParamField path="text" type="string" required>
+  The text to send to the terminal. Supports escape sequences:
+  - `\n` - Newline (converted to carriage return `\r` for terminal)
+  - `\r` - Carriage return
+  - `\t` - Tab character
+</ParamField>
+
+<ParamField path="surface_id" type="string">
+  The UUID or reference of the terminal surface. If not provided, sends to the currently focused surface.
+</ParamField>
+
+<ParamField path="workspace_id" type="string">
+  The UUID of the workspace containing the surface. If not provided, uses the currently selected workspace.
+</ParamField>
+
+<ParamField path="window_id" type="string">
+  The UUID of the window to target. If not provided, uses the current window.
+</ParamField>
+
+## Response
+
+Returns an object confirming the text was sent:
+
+<ResponseField name="surface_id" type="string">
+  The UUID of the surface that received the text
+</ResponseField>
+
+<ResponseField name="surface_ref" type="string">
+  The human-readable reference for the surface
+</ResponseField>
+
+<ResponseField name="workspace_id" type="string">
+  The UUID of the workspace
+</ResponseField>
+
+<ResponseField name="workspace_ref" type="string">
+  The human-readable reference for the workspace
+</ResponseField>
+
+<ResponseField name="window_id" type="string">
+  The UUID of the window
+</ResponseField>
+
+<ResponseField name="window_ref" type="string">
+  The human-readable reference for the window
+</ResponseField>
+
+<ResponseField name="queued" type="boolean">
+  Whether the text was queued (true) or sent immediately (false). Text is queued if the terminal surface is not yet ready.
+</ResponseField>
+
+## Example
+
+<CodeGroup>
+```json Send Command
+{
+  "id": "1",
+  "method": "surface.send_text",
+  "params": {
+    "text": "echo hello\n"
+  }
+}
+```
+
+```json Send to Specific Surface
+{
+  "id": "2",
+  "method": "surface.send_text",
+  "params": {
+    "surface_id": "surface:2",
+    "text": "ls -la\n"
+  }
+}
+```
+
+```json Multi-line Input
+{
+  "id": "3",
+  "method": "surface.send_text",
+  "params": {
+    "text": "for i in {1..5}\ndo\n  echo $i\ndone\n"
+  }
+}
+```
+
+```json Response
+{
+  "ok": true,
+  "result": {
+    "surface_id": "770e8400-e29b-41d4-a716-446655440000",
+    "surface_ref": "surface:1",
+    "workspace_id": "550e8400-e29b-41d4-a716-446655440000",
+    "workspace_ref": "workspace:1",
+    "window_id": "660e8400-e29b-41d4-a716-446655440000",
+    "window_ref": "window:1",
+    "queued": false
+  }
+}
+```
+</CodeGroup>
+
+## CLI Usage
+
+```bash
+# Send text to focused surface
+cmux send echo hello\\n
+# Send to specific surface
+cmux send --surface surface:2 -- ls -la\\n
+# The -- separator is recommended when sending complex text
+cmux send -- git commit -m \"Initial commit\"\\n
+# Legacy alias
+cmux send-panel --panel surface:1 -- echo test\\n
+```
+
+## Errors
+
+<ResponseField name="not_found" type="error">
+  No focused surface or the specified surface does not exist
+</ResponseField>
+
+<ResponseField name="invalid_params" type="error">
+  - Missing `text` parameter
+  - Target surface is not a terminal (use only with terminal surfaces, not browser)
+</ResponseField>
+
+## Text Processing
+
+- `\n` is converted to `\r` (carriage return) for terminal compatibility
+- Escape sequences are processed before sending
+- Text is sent directly to the terminal's PTY
+- For executing commands, append `\n` to simulate pressing Enter
+
+## Notes
+
+- Only works with terminal surfaces, not browser surfaces
+- Text is sent to whatever is running in the terminal (shell, vim, etc.)
+- The terminal view is automatically refreshed after sending text
+- If the surface is not ready, text is queued and sent when the surface initializes
+- Use [surface.send_key](/api/surface/send-key) for special keys like Ctrl+C
+
+## See Also
+
+- [surface.send_key](/api/surface/send-key) - Send special key combinations
+- [surface.read_text](/api/surface/read-text) - Read terminal output
+- [surface.focus](/api/surface/focus) - Focus a surface before sending text

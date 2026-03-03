@@ -1,0 +1,250 @@
+---
+title: "Send Notifications"
+description: "Send notifications to cmux with the notify command"
+---
+
+The `notify` command sends notifications to cmux that appear in the notification panel and trigger macOS system notifications.
+
+## Syntax
+
+```bash
+cmux notify --title <text> [--subtitle <text>] [--body <text>] [--workspace <id|ref>] [--surface <id|ref>]
+```
+
+## Options
+
+<ParamField path="--title" type="string" required>
+  Notification title (defaults to "Notification")
+</ParamField>
+
+<ParamField path="--subtitle" type="string">
+  Notification subtitle (optional)
+</ParamField>
+
+<ParamField path="--body" type="string">
+  Notification body text (optional)
+</ParamField>
+
+<ParamField path="--workspace" type="string">
+  Target workspace ID or reference (e.g., `workspace:0`)
+  
+  If not specified, uses `$CMUX_WORKSPACE_ID` from environment
+</ParamField>
+
+<ParamField path="--surface" type="string">
+  Target surface/panel ID or reference (e.g., `surface:1`)
+  
+  If not specified, uses `$CMUX_SURFACE_ID` from environment
+</ParamField>
+
+## Environment Variable Targeting
+
+cmux automatically sets these environment variables in child shells:
+
+- `CMUX_WORKSPACE_ID` - UUID of the current workspace
+- `CMUX_SURFACE_ID` - UUID of the current surface/panel
+- `CMUX_SOCKET_PATH` - Path to the control socket
+
+When you run `cmux notify` without `--workspace` or `--surface` flags, it automatically routes the notification to the workspace/surface that invoked the command.
+
+## Examples
+
+### Basic Usage
+
+```bash
+# Simple notification
+cmux notify --title "Build Complete"
+
+# With subtitle and body
+cmux notify --title "Claude Code" --subtitle "Permission" --body "Approval needed"
+
+# Multi-line body
+cmux notify --title "Test Results" --body "5 tests passed\n2 tests failed"
+```
+
+### Targeting Specific Workspace/Surface
+
+```bash
+# Target specific workspace by reference
+cmux notify --title "Done" --workspace workspace:0
+
+# Target specific surface
+cmux notify --title "Update" --workspace workspace:1 --surface surface:2
+
+# Using environment variables explicitly
+cmux notify --title "Status" --workspace "$CMUX_WORKSPACE_ID"
+```
+
+### Fallback to osascript
+
+For portability, check if cmux is available and fall back to macOS notifications:
+
+```bash
+# One-liner with fallback
+command -v cmux &>/dev/null && \
+  cmux notify --title "Done" --body "Task complete" || \
+  osascript -e 'display notification "Task complete" with title "Done"'
+
+# In a script
+if command -v cmux &>/dev/null; then
+    cmux notify --title "Build Complete" --subtitle "Success" --body "All tests passed"
+else
+    osascript -e 'display notification "All tests passed" with title "Build Complete"'
+fi
+```
+
+### From Python
+
+```python
+import shutil
+import subprocess
+
+def notify(title: str, subtitle: str = "", body: str = ""):
+    """Send notification via cmux or fall back to osascript."""
+    if shutil.which("cmux"):
+        cmd = ["cmux", "notify", "--title", title]
+        if subtitle:
+            cmd.extend(["--subtitle", subtitle])
+        if body:
+            cmd.extend(["--body", body])
+        subprocess.run(cmd)
+    else:
+        # Fallback to macOS
+        script = f'display notification "{body}" with title "{title}"'
+        subprocess.run(["osascript", "-e", script])
+
+# Usage
+notify("Build Complete", body="All tests passed")
+```
+
+## Agent Hook Examples
+
+### Claude Code Hook
+
+Add to `~/.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "idle_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v cmux &>/dev/null && cmux notify --title 'Claude Code' --body 'Waiting for input' || osascript -e 'display notification \"Waiting for input\" with title \"Claude Code\"'"
+          }
+        ]
+      },
+      {
+        "matcher": "permission_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v cmux &>/dev/null && cmux notify --title 'Claude Code' --subtitle 'Permission' --body 'Approval needed' || osascript -e 'display notification \"Approval needed\" with title \"Claude Code\"'"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### OpenAI Codex Hook
+
+Add to `~/.codex/config.toml`:
+
+```toml
+notify = ["bash", "-c", "command -v cmux &>/dev/null && cmux notify --title Codex --body \"$(echo $1 | jq -r '.\"last-assistant-message\" // \"Turn complete\"' 2>/dev/null | head -c 100)\" || osascript -e 'display notification \"Turn complete\" with title \"Codex\"'", "--"]
+```
+
+Or create `~/.local/bin/codex-notify.sh`:
+
+```bash
+#!/bin/bash
+MSG=$(echo "$1" | jq -r '."last-assistant-message" // "Turn complete"' 2>/dev/null | head -c 100)
+command -v cmux &>/dev/null && \
+  cmux notify --title "Codex" --body "$MSG" || \
+  osascript -e "display notification \"$MSG\" with title \"Codex\""
+```
+
+Then reference it:
+
+```toml
+notify = ["bash", "~/.local/bin/codex-notify.sh"]
+```
+
+### OpenCode Plugin
+
+Create `.opencode/plugins/cmux-notify.js`:
+
+```javascript
+export const CmuxNotificationPlugin = async ({ $, }) => {
+  const notify = async (title, body) => {
+    try {
+      await $`command -v cmux && cmux notify --title ${title} --body ${body}`;
+    } catch {
+      await $`osascript -e ${"display notification \"" + body + "\" with title \"" + title + "\""}`;
+    }
+  };
+
+  return {
+    event: async ({ event }) => {
+      if (event.type === "session.idle") {
+        await notify("OpenCode", "Session idle");
+      } else if (event.type === "session.waiting") {
+        await notify("OpenCode", "Waiting for input");
+      }
+    },
+  };
+};
+```
+
+## Implementation Details
+
+### Protocol
+
+The `notify` command sends a v1 socket command in the format:
+
+```
+notify_target <workspace_id> <surface_id> <title>|<subtitle>|<body>
+```
+
+- Workspace and surface IDs are resolved from handles/refs or environment variables
+- Payload components are pipe-separated (`|`)
+- Both macOS system notification and in-app notification panel are triggered
+
+### Socket Communication
+
+From `CLI/cmux.swift:1270-1284`:
+
+```swift
+case "notify":
+    let title = optionValue(commandArgs, name: "--title") ?? "Notification"
+    let subtitle = optionValue(commandArgs, name: "--subtitle") ?? ""
+    let body = optionValue(commandArgs, name: "--body") ?? ""
+
+    let notifyWsFlag = optionValue(commandArgs, name: "--workspace")
+    let workspaceArg = notifyWsFlag ?? (windowId == nil ? ProcessInfo.processInfo.environment["CMUX_WORKSPACE_ID"] : nil)
+    let surfaceArg = optionValue(commandArgs, name: "--surface") ?? (notifyWsFlag == nil && windowId == nil ? ProcessInfo.processInfo.environment["CMUX_SURFACE_ID"] : nil)
+
+    let targetWorkspace = try resolveWorkspaceId(workspaceArg, client: client)
+    let targetSurface = try resolveSurfaceId(surfaceArg, workspaceId: targetWorkspace, client: client)
+
+    let payload = "\(title)|\(subtitle)|\(body)"
+    let response = try sendV1Command("notify_target \(targetWorkspace) \(targetSurface) \(payload)", client: client)
+    print(response)
+```
+
+## Best Practices
+
+1. **Always check availability** - Use `command -v cmux` before calling
+2. **Provide fallbacks** - Include `|| osascript` for portability
+3. **Keep titles concise** - Use subtitle/body for details
+4. **Leverage environment variables** - No need to pass `--workspace`/`--surface` when running from within cmux
+5. **Escape special characters** - Quote arguments properly in shell hooks
+
+## Related Commands
+
+- [list-notifications](/cli/notifications/list) - List all notifications
+- [clear-notifications](/cli/notifications/clear) - Clear notification history

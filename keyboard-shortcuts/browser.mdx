@@ -1,0 +1,42 @@
+---
+title: Browser Shortcuts
+description: Keyboard shortcuts for browser navigation and developer tools in cmux
+---
+
+The in-app browser in cmux has a scriptable API and supports standard browser navigation shortcuts. Developer tool shortcuts follow Safari defaults.
+
+## Browser Management
+
+| Shortcut | Action |
+|----------|--------|
+| ⌘ ⇧ L | Open browser in split |
+
+The in-app browser can be split alongside your terminal, with a scriptable API ported from [agent-browser](https://github.com/vercel-labs/agent-browser).
+
+## Navigation
+
+| Shortcut | Action |
+|----------|--------|
+| ⌘ L | Focus address bar |
+| ⌘ [ | Back |
+| ⌘ ] | Forward |
+| ⌘ R | Reload page |
+
+## Developer Tools
+
+| Shortcut | Action |
+|----------|--------|
+| ⌥ ⌘ I | Toggle Developer Tools (Safari default) |
+| ⌥ ⌘ C | Show JavaScript Console (Safari default) |
+
+<Note>
+Browser developer-tool shortcuts follow Safari defaults and are customizable in **Settings → Keyboard Shortcuts**.
+</Note>
+
+## Scriptable API
+
+The browser supports a scriptable API that allows agents to:
+- Snapshot the accessibility tree
+- Get element references
+- Click and fill forms
+- Evaluate JavaScript

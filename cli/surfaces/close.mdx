@@ -1,0 +1,85 @@
+---
+title: close-surface
+description: Close a surface
+---
+
+The `close-surface` command closes a specific surface (panel).
+
+## Terminology
+
+In cmux, **surface** and **panel** are synonymous terms. A surface represents a single UI element (terminal, browser, etc.) within a pane.
+
+## Usage
+
+```bash
+cmux close-surface [--surface <id|ref|index>] [--workspace <id|ref>]
+```
+
+## Options
+
+- `--surface <id|ref|index>` - Surface to close (defaults to `$CMUX_SURFACE_ID`)
+- `--panel <id|ref|index>` - Alias for `--surface` (legacy)
+- `--workspace <id|ref>` - Target workspace (defaults to `$CMUX_WORKSPACE_ID`)
+- `--json` - Output in JSON format
+- `--id-format <refs|uuids|both>` - ID format for output (default: `refs`)
+
+## Targeting
+
+Surfaces can be targeted by:
+- **UUID** - Full surface ID
+- **Ref** - Short reference (e.g., `surface:0`, `surface:1`)
+- **Index** - Numeric index within the workspace (0-based)
+- **Environment** - If not specified, uses `$CMUX_SURFACE_ID`
+
+## Output
+
+### Human-readable format
+
+```
+OK
+```
+
+### JSON format
+
+```json
+{
+  "ok": true
+}
+```
+
+## Examples
+
+```bash
+# Close current surface (from shell integration)
+cmux close-surface
+
+# Close surface by ref
+cmux close-surface --surface surface:1
+
+# Close surface by index
+cmux close-surface --surface 2
+
+# Close surface in specific workspace
+cmux close-surface --surface surface:0 --workspace workspace:1
+
+# Close with legacy --panel flag
+cmux close-surface --panel surface:3
+```
+
+## Behavior
+
+- Closes the specified surface immediately
+- If the surface is the last in its pane, the pane remains empty
+- If the closed surface was focused, focus moves to another surface in the pane
+- Does not close the workspace or pane
+
+## Notes
+
+- The `--panel` flag is an alias for `--surface` (legacy compatibility)
+- When called from a terminal with shell integration, `$CMUX_SURFACE_ID` is automatically set
+
+## Related Commands
+
+- [list-panels](/cli/surfaces/list) - List surfaces
+- [new-surface](/cli/surfaces/create) - Create a new surface
+- [close-workspace](/cli/workspaces/close) - Close an entire workspace

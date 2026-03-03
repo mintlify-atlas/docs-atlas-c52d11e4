@@ -1,0 +1,329 @@
+---
+title: Session Restore
+description: What cmux saves and restores when you relaunch the app
+---
+
+cmux automatically saves your session state and restores it on relaunch. This preserves your workspace layout, directories, and scrollback, so you can pick up where you left off.
+
+## What's Restored
+
+On relaunch, cmux restores:
+
+### Window Layout
+
+- Window position and size
+- Display assignment (which monitor the window was on)
+- Number of windows
+
+### Workspace Metadata
+
+- Workspace titles (custom and process-based)
+- Workspace colors and pinned state
+- Selected workspace per window
+- Workspace order
+
+### Pane Layout
+
+- Horizontal and vertical splits
+- Split divider positions
+- Focused pane per workspace
+
+### Terminal State
+
+- **Working directory**: Each terminal reopens in its last working directory
+- **Scrollback history**: Up to 4,000 lines or 400,000 characters per terminal (best effort)
+- **TTY name**: Preserved for reference (but not used to reconnect to live processes)
+
+### Browser State
+
+- Current URL
+- Navigation history (back/forward URLs)
+- Zoom level
+- Developer tools visibility
+
+### Sidebar State
+
+- Sidebar visibility (shown/hidden)
+- Sidebar width
+- Selected sidebar panel (tabs or notifications)
+
+### Workspace Metadata
+
+- Git branch information
+- Listening ports
+- Status entries (custom key-value pairs)
+- Log entries
+- Progress indicators
+
+## What's NOT Restored
+
+cmux does **not** restore live process state:
+
+- **Active processes**: Running shells, editors (vim/nano), or apps (tmux/screen) are not resumed.
+- **Shell history**: Command history is managed by your shell (e.g., `~/.zsh_history`), not cmux.
+- **Environment variables**: Custom env vars set in a terminal session are not persisted.
+- **Process IDs**: PIDs change on every shell launch.
+
+**Example**: If you have an active `vim` session or a running `npm dev` server, they will **not** be restored. You'll get fresh shell instances in the same directories.
+
+## Scrollback Restoration
+
+cmux attempts to restore terminal scrollback by writing it to a temporary file and replaying it when the terminal launches.
+
+### Limits
+
+Scrollback is truncated to prevent excessive memory/disk usage:
+
+- **Max lines**: 4,000 lines per terminal
+- **Max characters**: 400,000 characters per terminal
+
+If your scrollback exceeds these limits, only the most recent portion is kept.
+
+### ANSI Escape Sequence Safety
+
+When truncating scrollback, cmux ensures it doesn't cut off in the middle of an ANSI escape sequence (which would corrupt colors or formatting on replay). If truncation would start inside a CSI sequence, cmux advances to the next complete character.
+
+### Scrollback Replay Mechanism
+
+Scrollback is restored via the `CMUX_RESTORE_SCROLLBACK_FILE` environment variable:
+
+1. cmux writes scrollback to a temp file in `/tmp/cmux-session-scrollback/<uuid>.txt`
+2. Sets `CMUX_RESTORE_SCROLLBACK_FILE=/tmp/cmux-session-scrollback/<uuid>.txt`
+3. Your shell's startup script can read this file and `cat` it to replay scrollback
+
+This is a **best-effort** mechanism. If your shell doesn't support the replay hook, scrollback is not restored.
+
+## Session Storage
+
+Session snapshots are saved to:
+
+```
+~/Library/Application Support/cmux/session-<bundle-id>.json
+```
+
+For example:
+
+- **Stable**: `session-com.cmuxterm.app.json`
+- **Nightly**: `session-com.cmuxterm.app.nightly.json`
+- **Debug**: `session-com.cmuxterm.app.debug.json`
+
+Each build uses a separate session file to prevent conflicts.
+
+### Autosave Interval
+
+Sessions are automatically saved every **8 seconds** while cmux is running.
+
+### Snapshot Schema
+
+The session file is JSON with the following schema:
+
+```json
+{
+  "version": 1,
+  "createdAt": 1709654321.0,
+  "windows": [
+    {
+      "frame": { "x": 100, "y": 100, "width": 1200, "height": 800 },
+      "display": { "displayID": 123456, "frame": {...}, "visibleFrame": {...} },
+      "sidebar": { "isVisible": true, "selection": "tabs", "width": 200 },
+      "tabManager": {
+        "selectedWorkspaceIndex": 0,
+        "workspaces": [
+          {
+            "processTitle": "zsh",
+            "customTitle": "My Project",
+            "customColor": "#ff0000",
+            "isPinned": false,
+            "currentDirectory": "/Users/me/project",
+            "focusedPanelId": "<uuid>",
+            "layout": { /* recursive split tree */ },
+            "panels": [
+              {
+                "id": "<uuid>",
+                "type": "terminal",
+                "title": "project — zsh",
+                "customTitle": null,
+                "directory": "/Users/me/project",
+                "isPinned": false,
+                "isManuallyUnread": false,
+                "gitBranch": { "branch": "main", "isDirty": false },
+                "listeningPorts": [3000],
+                "ttyName": "/dev/ttys001",
+                "terminal": {
+                  "workingDirectory": "/Users/me/project",
+                  "scrollback": "<last 4000 lines>"
+                },
+                "browser": null
+              }
+            ],
+            "statusEntries": [],
+            "logEntries": [],
+            "progress": null,
+            "gitBranch": null
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+### Snapshot Limits
+
+To prevent unbounded growth:
+
+- **Max windows**: 12 per snapshot
+- **Max workspaces**: 128 per window
+- **Max panels**: 512 per workspace
+- **Max scrollback**: 4,000 lines or 400,000 characters per terminal
+
+If you exceed these limits, only the first N items are saved.
+
+## When Restore is Skipped
+
+cmux skips session restore if:
+
+1. **`CMUX_DISABLE_SESSION_RESTORE=1` is set**: Explicitly disabled via environment variable.
+2. **Automated tests are running**: Detected via `XCTest*` or `CMUX_UI_TEST_*` environment variables.
+3. **Explicit launch arguments**: If you launch cmux with a path (e.g., `open -a cmux ~/projects`), it's treated as an explicit intent and skips restore.
+
+In these cases, cmux starts with a fresh window.
+
+## Disabling Session Restore
+
+To disable session restore permanently:
+
+```bash
+# Add to your shell profile (~/.zshrc, ~/.bashrc)
+export CMUX_DISABLE_SESSION_RESTORE=1
+```
+
+To disable for a single launch:
+
+```bash
+CMUX_DISABLE_SESSION_RESTORE=1 open -a cmux
+```
+
+## Clearing Saved Sessions
+
+To reset your session state, delete the session file:
+
+```bash
+rm ~/Library/Application\ Support/cmux/session-com.cmuxterm.app.json
+```
+
+The next time you launch cmux, it will start fresh.
+
+## Environment Variables
+
+### CMUX_DISABLE_SESSION_RESTORE
+
+Disable session restore:
+
+```bash
+export CMUX_DISABLE_SESSION_RESTORE=1
+```
+
+Useful for testing or if you prefer to start fresh every time.
+
+### CMUX_RESTORE_SCROLLBACK_FILE
+
+Set by cmux when restoring a terminal with scrollback. Points to a temp file containing the scrollback text:
+
+```bash
+CMUX_RESTORE_SCROLLBACK_FILE=/tmp/cmux-session-scrollback/<uuid>.txt
+```
+
+Your shell startup script can check this variable and replay scrollback:
+
+```bash
+# In ~/.zshrc or ~/.bashrc
+if [[ -n "$CMUX_RESTORE_SCROLLBACK_FILE" && -f "$CMUX_RESTORE_SCROLLBACK_FILE" ]]; then
+  cat "$CMUX_RESTORE_SCROLLBACK_FILE"
+  rm "$CMUX_RESTORE_SCROLLBACK_FILE"
+  unset CMUX_RESTORE_SCROLLBACK_FILE
+fi
+```
+
+## Best Practices
+
+### Use tmux for Process Persistence
+
+If you need to resume active processes (editors, dev servers, build tools), use **tmux** or **screen** inside cmux terminals:
+
+```bash
+# Start a tmux session
+tmux new -s myproject
+
+# Detach with Ctrl+B, D
+# On relaunch, reattach:
+tmux attach -t myproject
+```
+
+cmux restores the terminal layout and directories, while tmux restores the processes.
+
+### Pin Important Workspaces
+
+Pinned workspaces are restored in their original order and are visually distinguished in the sidebar.
+
+### Limit Scrollback
+
+If you work with extremely verbose output (logs, build output), consider reducing `scrollback-limit` in your Ghostty config to speed up session saves:
+
+```bash
+# ~/.config/ghostty/config
+scrollback-limit = 2000
+```
+
+This also reduces memory usage.
+
+### Test Restore Regularly
+
+Periodically restart cmux to ensure your session restores correctly. If something looks wrong, check:
+
+1. The session file exists: `ls ~/Library/Application\ Support/cmux/session-*.json`
+2. The file is valid JSON: `cat ~/Library/Application\ Support/cmux/session-*.json | jq .`
+3. No error messages in Console.app (filter by "cmux")
+
+## Troubleshooting
+
+### "Scrollback is not restored"
+
+Scrollback restoration requires your shell to support the `CMUX_RESTORE_SCROLLBACK_FILE` mechanism. Add the replay hook to your shell startup script (see [Environment Variables](#environment-variables)).
+
+### "Workspaces open in the wrong directory"
+
+Check the `currentDirectory` and `terminal.workingDirectory` fields in the session file. If they're incorrect, the issue is with directory tracking (likely a shell integration issue).
+
+### "Session restore is slow"
+
+Large session files (many workspaces, long scrollback) can slow down launch. Mitigations:
+
+- Reduce `scrollback-limit` in Ghostty config
+- Close unused workspaces before quitting
+- Disable session restore if you don't need it
+
+### "Session file is corrupted"
+
+If the session file is invalid JSON, cmux will skip restore and start fresh. Check the file manually:
+
+```bash
+cat ~/Library/Application\ Support/cmux/session-com.cmuxterm.app.json | jq .
+```
+
+If it's corrupted, delete it and restart:
+
+```bash
+rm ~/Library/Application\ Support/cmux/session-com.cmuxterm.app.json
+```
+
+## Implementation Details
+
+Session persistence is implemented in `Sources/SessionPersistence.swift`:
+
+- **Snapshot creation**: `SessionPersistenceStore.save(_:fileURL:)` (Sources/SessionPersistence.swift:369)
+- **Snapshot loading**: `SessionPersistenceStore.load(fileURL:)` (Sources/SessionPersistence.swift:358)
+- **Scrollback truncation**: `SessionPersistencePolicy.truncatedScrollback(_:)` (Sources/SessionPersistence.swift:28)
+- **Restore policy**: `SessionRestorePolicy.shouldAttemptRestore(arguments:environment:)` (Sources/SessionPersistence.swift:119)
+
+Scrollback replay is handled by `SessionScrollbackReplayStore.replayEnvironment(for:tempDirectory:)` (Sources/SessionPersistence.swift:421).

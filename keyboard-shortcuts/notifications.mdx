@@ -1,0 +1,32 @@
+---
+title: Notification Shortcuts
+description: Keyboard shortcuts for managing notifications in cmux
+---
+
+The notification system in cmux helps you track when coding agents need your attention. Panes get a blue ring and tabs light up when notifications arrive.
+
+## Notification Navigation
+
+| Shortcut | Action |
+|----------|--------|
+| ⌘ I | Show notifications panel |
+| ⌘ ⇧ U | Jump to latest unread |
+
+<Note>
+Use ⌘ ⇧ U to quickly jump to the most recent unread notification across all your workspaces and splits.
+</Note>
+
+## Notification System
+
+The notification system provides visual indicators when agents need your input:
+
+- **Blue rings** appear around panes with pending notifications
+- **Sidebar tabs light up** to show which workspace has notifications
+- The **notification panel** (⌘ I) shows all pending notifications in one place
+- Each tab displays the latest notification text in the sidebar
+
+## Integration
+
+Notifications are triggered by:
+- Terminal sequences (OSC 9/99/777)
+- The CLI command `cmux notify` for integration with coding agent hooks (Claude Code, OpenCode, etc.)

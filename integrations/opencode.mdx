@@ -1,0 +1,146 @@
+---
+title: OpenCode Integration
+description: Set up OpenCode plugin to send cmux notifications
+---
+
+OpenCode supports plugins that can listen to session events and trigger notifications.
+
+## Plugin Setup
+
+Create `.opencode/plugins/cmux-notify.js`:
+
+```javascript
+export const CmuxNotificationPlugin = async ({ $, }) => {
+  const notify = async (title, body) => {
+    try {
+      await $`command -v cmux && cmux notify --title ${title} --body ${body}`;
+    } catch {
+      await $`osascript -e ${"display notification \"" + body + "\" with title \"" + title + "\""}`;
+    }
+  };
+
+  return {
+    event: async ({ event }) => {
+      if (event.type === "session.idle") {
+        await notify("OpenCode", "Session idle");
+      }
+    },
+  };
+};
+```
+
+## Setup Steps
+
+<Steps>
+  <Step title="Create plugin directory">
+    ```bash
+    mkdir -p .opencode/plugins
+    ```
+  </Step>
+  
+  <Step title="Create plugin file">
+    Create `.opencode/plugins/cmux-notify.js` with the code above
+  </Step>
+  
+  <Step title="Restart OpenCode">
+    Restart OpenCode to load the plugin
+  </Step>
+  
+  <Step title="Test the integration">
+    Run an OpenCode session and verify notifications appear when the session becomes idle
+  </Step>
+</Steps>
+
+## Plugin Structure
+
+The plugin exports a function that:
+
+1. **Defines a notify helper** - Tries cmux first, falls back to osascript
+2. **Returns an event handler** - Listens for `session.idle` events
+3. **Sends notifications** - Calls the notify helper when events occur
+
+## Event Types
+
+### session.idle
+
+Triggered when OpenCode session becomes idle. The notification includes:
+- **Title**: "OpenCode"
+- **Body**: "Session idle"
+
+## Customization
+
+You can extend the plugin to handle additional events:
+
+```javascript
+return {
+  event: async ({ event }) => {
+    if (event.type === "session.idle") {
+      await notify("OpenCode", "Session idle");
+    }
+    if (event.type === "session.start") {
+      await notify("OpenCode", "Session started");
+    }
+    if (event.type === "session.complete") {
+      await notify("OpenCode", "Session complete");
+    }
+  },
+};
+```
+
+## Fallback Behavior
+
+The plugin includes automatic fallback:
+
+1. **cmux available** - Notifications appear in cmux panel with visual indicators
+2. **cmux not available** - Falls back to macOS system notifications via `osascript`
+
+## Visual Indicators
+
+When OpenCode sends a notification:
+- The terminal pane gets a **blue ring**
+- The workspace tab **lights up** in the sidebar
+- The notification appears in the **notifications panel** (⌘I)
+- Press **⌘⇧U** to jump to the most recent unread notification
+
+## Advanced Usage
+
+You can customize the notification content based on session context:
+
+```javascript
+export const CmuxNotificationPlugin = async ({ $, }) => {
+  const notify = async (title, body, subtitle = null) => {
+    try {
+      const args = [`--title`, title, `--body`, body];
+      if (subtitle) args.push(`--subtitle`, subtitle);
+      await $`command -v cmux && cmux notify ${args}`;
+    } catch {
+      await $`osascript -e ${"display notification \"" + body + "\" with title \"" + title + "\""}`;
+    }
+  };
+
+  return {
+    event: async ({ event }) => {
+      if (event.type === "session.idle") {
+        const context = event.context || "waiting";
+        await notify("OpenCode", context, "Session Idle");
+      }
+    },
+  };
+};
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Plugin not loading">
+    - Verify `.opencode/plugins/cmux-notify.js` exists
+    - Check that the file exports `CmuxNotificationPlugin`
+    - Ensure OpenCode has been restarted
+  </Accordion>
+  
+  <Accordion title="Notifications not appearing">
+    - Test the cmux command manually: `cmux notify --title "Test" --body "Hello"`
+    - Check the plugin syntax is valid JavaScript
+    - Verify event.type matches expected values
+  </Accordion>
+</AccordionGroup>

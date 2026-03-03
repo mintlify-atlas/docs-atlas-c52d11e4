@@ -1,0 +1,195 @@
+---
+title: capabilities
+description: Query cmux system capabilities and feature support
+---
+
+The `capabilities` command returns information about the features and capabilities supported by the running cmux instance.
+
+## Usage
+
+```bash
+cmux capabilities [--id-format <refs|uuids|both>]
+```
+
+## Options
+
+| Option | Description |
+|--------|-------------|
+| `--json` | Output in JSON format (always returns JSON) |
+| `--id-format` | Control ID format in response: `refs`, `uuids`, or `both` |
+
+## Response Format
+
+The command returns a JSON object describing system capabilities:
+
+```json
+{
+  "version": "0.x.x",
+  "build": 123,
+  "methods": [
+    "system.identify",
+    "system.capabilities",
+    "system.tree",
+    "workspace.create",
+    "workspace.list",
+    "surface.create",
+    "browser.navigate"
+  ],
+  "features": {
+    "browser_panels": true,
+    "multi_window": true,
+    "workspace_layouts": true,
+    "socket_v2": true
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `version` | string | cmux version string (e.g., "0.15.0") |
+| `build` | number | Build number |
+| `methods` | array | List of supported v2 socket methods |
+| `features` | object | Feature flags for optional capabilities |
+
+## Feature Flags
+
+The `features` object may include:
+
+| Feature | Description |
+|---------|-------------|
+| `browser_panels` | Browser surface support |
+| `multi_window` | Multiple window support |
+| `workspace_layouts` | Custom workspace layout support |
+| `socket_v2` | V2 socket protocol support |
+| `tab_reordering` | Drag-and-drop tab reordering |
+| `pane_splits` | Pane splitting support |
+
+## Examples
+
+### Check system capabilities
+
+```bash
+cmux capabilities
+```
+
+Returns all supported features and methods.
+
+### Query specific feature
+
+```bash
+# Check if browser panels are supported
+cmux capabilities | jq -r '.features.browser_panels'
+```
+
+### Validate method support
+
+```bash
+# Check if system.tree is available
+cmux capabilities | jq -e '.methods[] | select(. == "system.tree")'
+```
+
+### Version check
+
+```bash
+# Get cmux version
+cmux capabilities | jq -r '.version'
+```
+
+## Use Cases
+
+### Feature Detection in Scripts
+
+Make scripts compatible with different cmux versions:
+
+```bash
+#!/bin/bash
+CAPS=$(cmux capabilities)
+
+if echo $CAPS | jq -e '.features.browser_panels' > /dev/null; then
+  echo "Browser panels supported"
+  cmux new-surface --type browser --url https://example.com
+else
+  echo "Browser panels not available in this version"
+fi
+```
+
+### Method Availability Check
+
+Before calling a v2 socket method:
+
+```bash
+METHOD="browser.tab.list"
+if cmux capabilities | jq -e ".methods[] | select(. == \"$METHOD\")" > /dev/null; then
+  # Method is available
+  cmux browser list
+else
+  # Fallback to alternative approach
+  echo "Method $METHOD not supported"
+fi
+```
+
+### Version-Based Conditional Logic
+
+```bash
+VERSION=$(cmux capabilities | jq -r '.version')
+if [ "$VERSION" \> "0.15.0" ]; then
+  echo "Using new features from 0.15+"
+fi
+```
+
+### CI/CD Environment Validation
+
+Validate that the CI environment has the required cmux version:
+
+```bash
+# In CI pipeline
+REQUIRED_BUILD=100
+CURRENT_BUILD=$(cmux capabilities | jq -r '.build')
+
+if [ $CURRENT_BUILD -lt $REQUIRED_BUILD ]; then
+  echo "Error: cmux build $CURRENT_BUILD is too old (need $REQUIRED_BUILD+)"
+  exit 1
+fi
+```
+
+## Implementation Notes
+
+From `CLI/cmux.swift:745-747`:
+
+- The command uses the `system.capabilities` v2 socket method
+- Response is always in JSON format
+- The `--id-format` option controls how IDs/refs are displayed in the response
+- Returns immediately without connecting to a workspace or surface
+
+## Capability Discovery Pattern
+
+For robust automation, use capabilities to adapt to the available feature set:
+
+```bash
+#!/bin/bash
+set -e
+
+# Discover capabilities
+CAPS=$(cmux capabilities)
+VERSION=$(echo $CAPS | jq -r '.version')
+METHODS=$(echo $CAPS | jq -r '.methods[]')
+
+echo "cmux version: $VERSION"
+
+# Check for required method
+if echo $METHODS | grep -q "system.tree"; then
+  echo "Using system.tree for layout discovery"
+  TREE=$(cmux tree --json)
+else
+  echo "Falling back to manual workspace enumeration"
+  WORKSPACES=$(cmux list-workspaces --json)
+fi
+```
+
+## Related Commands
+
+- [identify](/cli/system/identify) - Get current context
+- [tree](/cli/system/tree) - View hierarchical layout
+- [overview](/cli/overview) - CLI overview and environment setup

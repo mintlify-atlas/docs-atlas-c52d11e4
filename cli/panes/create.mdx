@@ -1,0 +1,154 @@
+---
+title: "new-pane"
+description: "Create a new pane in a workspace"
+---
+
+Create a new pane in the workspace. A pane is a container that holds surfaces (tabs) and can be arranged in splits alongside other panes.
+
+## Usage
+
+```bash
+cmux new-pane [flags]
+```
+
+## Flags
+
+<ParamField path="--type" type="string" default="terminal">
+  Pane type: `terminal` or `browser`
+</ParamField>
+
+<ParamField path="--direction" type="string" default="right">
+  Split direction: `left`, `right`, `up`, or `down`
+</ParamField>
+
+<ParamField path="--workspace" type="string">
+  Target workspace (default: `$CMUX_WORKSPACE_ID`)
+</ParamField>
+
+<ParamField path="--url" type="string">
+  URL for browser panes (only applicable when `--type browser`)
+</ParamField>
+
+## Pane vs Surface
+
+Understanding the hierarchy:
+
+- **Workspace**: A collection of panes (like a tmux window)
+- **Pane**: A split container holding one or more surfaces
+- **Surface**: An individual terminal or browser instance (like a tab)
+
+`new-pane` creates a new split container in the workspace layout. If you want to add a tab to an existing pane, use `new-surface` instead.
+
+## Split Directions
+
+The `--direction` flag controls where the new pane appears relative to the currently focused pane:
+
+- `right` - Creates a vertical split, new pane on the right
+- `left` - Creates a vertical split, new pane on the left
+- `down` - Creates a horizontal split, new pane below
+- `up` - Creates a horizontal split, new pane above
+
+## Handle-Based Targeting
+
+The command returns handle references for the created resources:
+
+```
+OK surface:3 pane:2 workspace:1
+```
+
+This indicates:
+- New surface created: `surface:3`
+- In new pane: `pane:2`
+- Within workspace: `workspace:1`
+
+These handles can be used in subsequent commands:
+
+```bash
+# Focus the new pane
+cmux focus-pane pane:2
+
+# Send text to the new surface
+cmux send --surface surface:3 -- echo "Hello"
+```
+
+## JSON Output
+
+With `--json` flag, get structured output:
+
+```json
+{
+  "surface_ref": "surface:3",
+  "surface_id": "uuid-here",
+  "pane_ref": "pane:2",
+  "pane_id": "uuid-here",
+  "workspace_ref": "workspace:1",
+  "workspace_id": "uuid-here"
+}
+```
+
+## Examples
+
+### Create terminal pane on the right
+
+```bash
+cmux new-pane
+```
+
+Creates a new terminal pane splitting right from the current pane.
+
+### Create browser pane below
+
+```bash
+cmux new-pane --type browser --direction down --url https://example.com
+```
+
+Creates a browser pane in a horizontal split below the current pane and navigates to the URL.
+
+### Create pane in specific workspace
+
+```bash
+cmux new-pane --workspace workspace:2 --direction left
+```
+
+### Create pane splitting up
+
+```bash
+cmux new-pane --direction up
+```
+
+### Create browser pane with URL
+
+```bash
+cmux new-pane --type browser --url https://github.com
+```
+
+### Capture the handle and use it
+
+```bash
+# Create and extract the surface handle
+OUTPUT=$(cmux new-pane --type browser --url https://docs.example.com)
+SURFACE_REF=$(echo "$OUTPUT" | awk '{print $2}')
+
+# Send commands to the new pane
+cmux send --surface "$SURFACE_REF" -- echo "Ready"
+```
+
+### Create with JSON output
+
+```bash
+cmux --json new-pane --type terminal --direction down
+```
+
+## Difference from new-split
+
+- `new-pane`: Creates a new **pane** (container) with a new surface inside it
+- `new-split`: Creates a new **surface** (tab) within the current pane by splitting it
+
+Use `new-pane` when you want workspace-level splits. Use `new-split` when you want to split a surface within the current pane.
+
+## See Also
+
+- [new-split](/cli/panes/split) - Split a surface within a pane
+- [new-surface](/cli/surfaces/create) - Add a tab to an existing pane
+- [focus-pane](/cli/panes/focus) - Focus a specific pane
+- [list-panes](/cli/panes/list) - List all panes

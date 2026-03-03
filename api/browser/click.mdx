@@ -1,0 +1,311 @@
+---
+title: browser.click
+description: Click an element in a browser surface
+---
+
+## Method
+
+`browser.click`
+
+## Description
+
+Clicks an element identified by a CSS selector or element ref (from `browser.snapshot`). This simulates a user mouse click on the center of the element.
+
+## Parameters
+
+<ParamField path="surface_id" type="string" required>
+  Browser surface ID (UUID or ref like `surface:1`)
+</ParamField>
+
+<ParamField path="selector" type="string" required>
+  CSS selector or element ref (e.g., `@e3`, `button.submit`, `#login-btn`)
+</ParamField>
+
+<ParamField path="snapshot_after" type="boolean">
+  If true, returns a post-action snapshot with refs, title, and URL
+</ParamField>
+
+## Response
+
+<ResponseField name="ok" type="boolean">
+  Always `true` on success
+</ResponseField>
+
+<ResponseField name="post_action_snapshot" type="string">
+  DOM snapshot after click (only present if `snapshot_after: true`)
+</ResponseField>
+
+<ResponseField name="surface_id" type="string">
+  Surface UUID
+</ResponseField>
+
+<ResponseField name="surface_ref" type="string">
+  Surface short ref
+</ResponseField>
+
+## CLI Usage
+
+```bash
+# Click using element ref from snapshot
+cmux browser surface:1 click @e3
+
+# Click using CSS selector
+cmux browser surface:1 click "button.submit"
+
+# Click with ID selector
+cmux browser surface:1 click "#login-btn"
+
+# Click with post-action verification
+cmux browser surface:1 click --snapshot-after @e5
+
+# Using --selector flag
+cmux browser surface:1 click --selector ".accept-button"
+```
+
+## Agent-Browser Compatibility
+
+This method corresponds to:
+- `agent-browser click <selector>`
+
+**Key differences:**
+- cmux requires explicit surface targeting
+- Element refs (`@e1`) come from `browser.snapshot`
+- No modifier keys support (use `browser.eval` for complex interactions)
+
+## Examples
+
+<CodeGroup>
+
+```bash CLI
+# Typical workflow: snapshot -> click
+cmux browser surface:1 snapshot --interactive
+# Output shows: <button @e3>Submit</button>
+
+cmux browser surface:1 click @e3
+
+# Click by selector
+cmux browser surface:1 click "button[type='submit']"
+
+# Click and verify result
+cmux browser surface:1 click --snapshot-after @e3
+```
+
+```python Python
+import json
+import subprocess
+
+def click(surface_id: str, selector: str, snapshot_after: bool = False) -> dict:
+    cmd = ["cmux", "browser", surface_id, "click", "--json"]
+    if snapshot_after:
+        cmd.append("--snapshot-after")
+    cmd.append(selector)
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    return json.loads(result.stdout)
+
+# Click button and verify
+result = click("surface:1", "@e3", snapshot_after=True)
+if "post_action_snapshot" in result:
+    print("Page after click:")
+    print(result["post_action_snapshot"])
+```
+
+```javascript JavaScript
+const { execSync } = require('child_process');
+
+function click(surfaceId, selector, options = {}) {
+  const cmd = ['cmux', 'browser', surfaceId, 'click', '--json'];
+  if (options.snapshotAfter) cmd.push('--snapshot-after');
+  cmd.push(selector);
+  
+  const output = execSync(cmd.join(' '), { encoding: 'utf-8' });
+  return JSON.parse(output);
+}
+
+// Click submit button
+const result = click('surface:1', '@e3');
+console.log('Clicked successfully');
+
+// Click with verification
+const verified = click('surface:1', 'button.next', { snapshotAfter: true });
+if (verified.post_action_snapshot) {
+  console.log('Post-click state:', verified.post_action_snapshot);
+}
+```
+
+</CodeGroup>
+
+## Related Methods
+
+### browser.dblclick
+
+Double-click an element (same parameters as `click`):
+
+```bash
+cmux browser surface:1 dblclick @e7
+```
+
+### browser.hover
+
+Hover over an element without clicking:
+
+```bash
+cmux browser surface:1 hover "nav .dropdown-trigger"
+```
+
+Useful for:
+- Revealing dropdown menus
+- Triggering tooltips
+- Testing hover states
+
+### browser.focus
+
+Move keyboard focus to an element:
+
+```bash
+cmux browser surface:1 focus @e1
+```
+
+Useful for:
+- Focusing inputs before typing
+- Triggering focus-based validation
+- Testing keyboard navigation
+
+## Use Cases
+
+### Form Submission
+```bash
+# Fill form and submit
+cmux browser surface:1 type @e1 "user@example.com"
+cmux browser surface:1 type @e2 "password123"
+cmux browser surface:1 click @e3
+```
+
+### Navigation
+```bash
+# Click a link
+cmux browser surface:1 click "a[href='/dashboard']"
+
+# Click navigation item
+cmux browser surface:1 click "nav .menu-item:nth-child(2)"
+```
+
+### Modal Dialogs
+```bash
+# Open modal
+cmux browser surface:1 click ".open-modal"
+
+# Wait for modal
+cmux browser surface:1 wait --selector ".modal"
+
+# Click confirm
+cmux browser surface:1 click ".modal button.confirm"
+```
+
+### Dropdown Menus
+```bash
+# Hover to reveal menu
+cmux browser surface:1 hover ".nav-item.dropdown"
+
+# Click menu item
+cmux browser surface:1 click ".dropdown-menu a[href='/settings']"
+```
+
+## Element Targeting
+
+### Using Snapshot Refs
+```bash
+# 1. Get snapshot
+cmux browser surface:1 snapshot --interactive > /tmp/snap.txt
+
+# 2. Inspect refs
+cat /tmp/snap.txt
+# <button @e3>Submit</button>
+
+# 3. Click ref
+cmux browser surface:1 click @e3
+```
+
+### Using CSS Selectors
+```bash
+# By ID
+cmux browser surface:1 click "#submit-button"
+
+# By class
+cmux browser surface:1 click ".btn-primary"
+
+# By attribute
+cmux browser surface:1 click "button[type='submit']"
+
+# By text (use find.text instead)
+cmux browser surface:1 click "$(browser.find.text 'surface:1' 'Submit')"
+```
+
+### Using Find Locators
+```bash
+# Find by role and click
+cmux browser surface:1 find role button --name "Submit"
+# Returns: @e3
+
+cmux browser surface:1 click @e3
+```
+
+## Error Codes
+
+| Code | Description |
+|------|-------------|
+| `not_found` | Surface not found, element not found, or not a browser surface |
+| `invalid_params` | Missing or invalid selector |
+| `invalid_state` | Element not clickable (hidden, disabled, or obscured) |
+| `timeout` | Click action timed out |
+
+## Element State Checks
+
+Before clicking, verify element state:
+
+```bash
+# Check if element is visible
+cmux browser surface:1 is visible @e3
+# Output: true
+
+# Check if element is enabled
+cmux browser surface:1 is enabled @e3
+# Output: true
+
+# Then click
+cmux browser surface:1 click @e3
+```
+
+## Best Practices
+
+1. **Wait before clicking**: Ensure elements are ready
+   ```bash
+   cmux browser surface:1 wait --selector "button.submit"
+   cmux browser surface:1 click "button.submit"
+   ```
+
+2. **Use refs for dynamic content**: Snapshot refs adapt to DOM changes
+   ```bash
+   cmux browser surface:1 snapshot --interactive
+   cmux browser surface:1 click @e3
+   ```
+
+3. **Verify after critical actions**: Use `--snapshot-after` for important clicks
+   ```bash
+   cmux browser surface:1 click --snapshot-after "button.delete"
+   ```
+
+4. **Handle navigation**: Wait for page load after clicks that navigate
+   ```bash
+   cmux browser surface:1 click "a[href='/next-page']"
+   cmux browser surface:1 wait --load-state domcontentloaded
+   ```
+
+5. **Use specific selectors**: Avoid ambiguous selectors that match multiple elements
+
+## See Also
+
+- [browser.snapshot](/api/browser/snapshot) - Get element refs
+- [browser.type](/api/browser/type) - Type into inputs
+- [browser.wait](/api/browser/wait) - Wait for elements
+- [Automation Commands](/cli/browser/automation#find) - Locate elements
+- [Automation Commands](/cli/browser/automation#is-commands) - Check element state

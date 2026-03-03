@@ -1,0 +1,122 @@
+---
+title: surface.close
+description: Close a surface
+---
+
+Closes the specified surface. This operation cannot be undone.
+
+## Method
+
+```
+surface.close
+```
+
+## Parameters
+
+<ParamField path="surface_id" type="string">
+  The UUID or reference of the surface to close. If not provided, closes the currently focused surface.
+</ParamField>
+
+<ParamField path="workspace_id" type="string">
+  The UUID of the workspace containing the surface. If not provided, uses the currently selected workspace.
+</ParamField>
+
+<ParamField path="window_id" type="string">
+  The UUID of the window to target. If not provided, uses the current window.
+</ParamField>
+
+## Response
+
+Returns an object confirming the close operation:
+
+<ResponseField name="surface_id" type="string">
+  The UUID of the closed surface
+</ResponseField>
+
+<ResponseField name="surface_ref" type="string">
+  The human-readable reference for the closed surface
+</ResponseField>
+
+<ResponseField name="workspace_id" type="string">
+  The UUID of the workspace that contained the surface
+</ResponseField>
+
+<ResponseField name="workspace_ref" type="string">
+  The human-readable reference for the workspace
+</ResponseField>
+
+<ResponseField name="window_id" type="string">
+  The UUID of the window
+</ResponseField>
+
+<ResponseField name="window_ref" type="string">
+  The human-readable reference for the window
+</ResponseField>
+
+## Example
+
+<CodeGroup>
+```json Socket Request
+{
+  "id": "1",
+  "method": "surface.close",
+  "params": {
+    "surface_id": "770e8400-e29b-41d4-a716-446655440000"
+  }
+}
+```
+
+```json Close Focused
+{
+  "id": "2",
+  "method": "surface.close",
+  "params": {}
+}
+```
+
+```json Response
+{
+  "ok": true,
+  "result": {
+    "surface_id": "770e8400-e29b-41d4-a716-446655440000",
+    "surface_ref": "surface:2",
+    "workspace_id": "550e8400-e29b-41d4-a716-446655440000",
+    "workspace_ref": "workspace:1",
+    "window_id": "660e8400-e29b-41d4-a716-446655440000",
+    "window_ref": "window:1"
+  }
+}
+```
+</CodeGroup>
+
+## CLI Usage
+
+```bash
+# Close specific surface
+cmux close-surface --surface surface:2
+
+# Close focused surface
+cmux close-surface
+```
+
+## Errors
+
+<ResponseField name="not_found" type="error">
+  The specified surface does not exist
+</ResponseField>
+
+<ResponseField name="invalid_state" type="error">
+  Cannot close the last surface in a workspace
+</ResponseField>
+
+## Notes
+
+- Socket API close operations bypass confirmation dialogs (force close)
+- You cannot close the last surface in a workspace
+- When a surface is closed, focus automatically moves to another surface
+- Terminal processes are terminated when their surface is closed
+
+## See Also
+
+- [surface.create](/api/surface/create) - Create a new surface
+- [workspace.close](/api/workspace/close) - Close an entire workspace

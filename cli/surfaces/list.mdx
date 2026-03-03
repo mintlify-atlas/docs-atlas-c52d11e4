@@ -1,0 +1,87 @@
+---
+title: list-panels
+description: List surfaces in a workspace
+---
+
+The `list-panels` command lists all surfaces (panels) in a workspace.
+
+## Terminology
+
+In cmux, **surface** and **panel** are synonymous terms. The command is named `list-panels` for historical reasons, but it lists surfaces.
+
+## Usage
+
+```bash
+cmux list-panels [--workspace <id|ref>] [--json] [--id-format <refs|uuids|both>]
+```
+
+## Options
+
+- `--workspace <id|ref>` - Target workspace (defaults to `$CMUX_WORKSPACE_ID`)
+- `--json` - Output in JSON format
+- `--id-format <refs|uuids|both>` - ID format for output (default: `refs`)
+
+## Targeting
+
+Surfaces can be targeted by:
+- **UUID** - Full surface ID (e.g., `surface_id`)
+- **Ref** - Short reference (e.g., `surface:0`, `surface:1`)
+- **Index** - Numeric index within the pane (0-based)
+
+## Output
+
+### Human-readable format (default)
+
+```
+* surface:0  terminal  [focused]  "bash"
+  surface:1  browser  "https://example.com"
+```
+
+Format: `[*] <ref>  <type>  [focused]  "<title>"`
+- `*` prefix indicates the focused surface
+- Type can be `terminal`, `browser`, etc.
+- Title shows the current surface title
+
+### JSON format
+
+```json
+{
+  "surfaces": [
+    {
+      "surface_ref": "surface:0",
+      "focused": true,
+      "type": "terminal",
+      "title": "bash"
+    },
+    {
+      "surface_ref": "surface:1",
+      "focused": false,
+      "type": "browser",
+      "title": "https://example.com"
+    }
+  ]
+}
+```
+
+## Examples
+
+```bash
+# List surfaces in current workspace
+cmux list-panels
+
+# List surfaces in specific workspace
+cmux list-panels --workspace workspace:2
+
+# List surfaces with JSON output
+cmux list-panels --json
+
+# List surfaces with UUIDs instead of refs
+cmux list-panels --id-format uuids
+```
+
+## Related Commands
+
+- [new-surface](/cli/surfaces/create) - Create a new surface
+- [focus-panel](/cli/surfaces/focus) - Focus a surface
+- [close-surface](/cli/surfaces/close) - Close a surface
+- [list-pane-surfaces](/api/pane/surfaces) - List surfaces within a specific pane

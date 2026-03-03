@@ -1,0 +1,146 @@
+---
+title: browser.navigate
+description: Navigate a browser surface to a URL
+---
+
+## Method
+
+`browser.navigate`
+
+## Description
+
+Navigates the specified browser surface to a URL. This method waits for the initial navigation to start but does not wait for the page to fully load unless explicitly configured.
+
+## Parameters
+
+<ParamField path="surface_id" type="string" required>
+  Browser surface ID (UUID or ref like `surface:1`)
+</ParamField>
+
+<ParamField path="url" type="string" required>
+  Target URL to navigate to
+</ParamField>
+
+<ParamField path="snapshot_after" type="boolean">
+  If true, returns a post-action snapshot with refs, title, and URL
+</ParamField>
+
+## Response
+
+<ResponseField name="ok" type="boolean">
+  Always `true` on success
+</ResponseField>
+
+<ResponseField name="url" type="string">
+  The final URL after navigation
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  Page title after navigation
+</ResponseField>
+
+<ResponseField name="post_action_snapshot" type="string">
+  DOM snapshot with refs (only present if `snapshot_after: true`)
+</ResponseField>
+
+<ResponseField name="surface_id" type="string">
+  Surface UUID
+</ResponseField>
+
+<ResponseField name="surface_ref" type="string">
+  Surface short ref (e.g., `surface:1`)
+</ResponseField>
+
+## CLI Usage
+
+```bash
+# Navigate using surface ref
+cmux browser surface:1 navigate https://example.com
+
+# Navigate with UUID
+cmux browser <surface-uuid> goto https://example.com
+
+# Navigate with post-action snapshot
+cmux browser surface:1 navigate --snapshot-after https://example.com
+
+# Legacy compatibility
+cmux navigate --surface surface:1 https://example.com
+```
+
+## Agent-Browser Compatibility
+
+This method corresponds to:
+- `agent-browser open <url>` (when targeting an existing surface)
+- `agent-browser goto <url>`
+- `agent-browser navigate <url>`
+
+**Key differences:**
+- cmux requires explicit surface targeting (no global browser state)
+- Use `browser.open_split` to create a new browser surface
+- Navigate reuses the existing surface and preserves `surface_id`
+
+## Examples
+
+<CodeGroup>
+
+```bash CLI
+# Basic navigation
+cmux browser surface:1 navigate https://example.com/login
+
+# With snapshot for verification
+cmux browser surface:1 navigate --snapshot-after https://example.com
+```
+
+```python Python
+import json
+import subprocess
+
+def navigate(surface_id: str, url: str, snapshot: bool = False) -> dict:
+    cmd = ["cmux", "browser", surface_id, "navigate", "--json"]
+    if snapshot:
+        cmd.append("--snapshot-after")
+    cmd.append(url)
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    return json.loads(result.stdout)
+
+result = navigate("surface:1", "https://example.com", snapshot=True)
+print(f"Navigated to: {result['url']}")
+if "post_action_snapshot" in result:
+    print(result["post_action_snapshot"])
+```
+
+```javascript JavaScript
+const { execSync } = require('child_process');
+
+function navigate(surfaceId, url, options = {}) {
+  const cmd = ['cmux', 'browser', surfaceId, 'navigate', '--json'];
+  if (options.snapshotAfter) cmd.push('--snapshot-after');
+  cmd.push(url);
+  
+  const output = execSync(cmd.join(' '), { encoding: 'utf-8' });
+  return JSON.parse(output);
+}
+
+const result = navigate('surface:1', 'https://example.com', { snapshotAfter: true });
+console.log('URL:', result.url);
+console.log('Title:', result.title);
+```
+
+</CodeGroup>
+
+## Error Codes
+
+| Code | Description |
+|------|-------------|
+| `not_found` | Surface not found or not a browser surface |
+| `invalid_params` | Missing or invalid URL |
+| `timeout` | Navigation timed out |
+| `invalid_state` | Browser surface not ready |
+
+## See Also
+
+- [Navigation Commands](/cli/browser/navigation#back) - Navigate backwards in history
+- [Navigation Commands](/cli/browser/navigation#forward) - Navigate forward in history
+- [Navigation Commands](/cli/browser/navigation#reload) - Reload current page
+- [browser.wait](/api/browser/wait) - Wait for page conditions
+- [browser.snapshot](/api/browser/snapshot) - Capture DOM with refs

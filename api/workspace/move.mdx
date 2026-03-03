@@ -1,0 +1,174 @@
+---
+title: workspace.move_to_window
+description: Move a workspace to a different window
+---
+
+## Overview
+
+Moves a workspace from its current window to the specified target window. The workspace retains all its surfaces, panes, and state.
+
+## Method
+
+```
+workspace.move_to_window
+```
+
+## Parameters
+
+<ParamField path="workspace_id" type="string" required>
+  Workspace identifier (UUID or ref)
+</ParamField>
+
+<ParamField path="window_id" type="string" required>
+  Target window identifier (UUID or ref)
+</ParamField>
+
+<ParamField path="focus" type="boolean" optional default="true">
+  Whether to focus the target window and select the workspace after moving
+</ParamField>
+
+## Response
+
+<ResponseField name="workspace_id" type="string">
+  UUID of the moved workspace
+</ResponseField>
+
+<ResponseField name="workspace_ref" type="string">
+  Short reference for the workspace
+</ResponseField>
+
+<ResponseField name="window_id" type="string">
+  UUID of the target window
+</ResponseField>
+
+<ResponseField name="window_ref" type="string">
+  Short reference for the target window
+</ResponseField>
+
+## Error Codes
+
+<ResponseField name="invalid_params" type="error">
+  - Missing or invalid `workspace_id`
+  - Missing or invalid `window_id`
+</ResponseField>
+
+<ResponseField name="not_found" type="error">
+  - Workspace not found (code: `not_found`, data includes `workspace_id`)
+  - Window not found (code: `not_found`, data includes `window_id`)
+</ResponseField>
+
+<ResponseField name="internal_error" type="error">
+  Failed to move workspace (detach/attach operation failed)
+</ResponseField>
+
+## Move Process
+
+1. **Detach** workspace from source window via `TabManager.detachWorkspace(tabId:)`
+2. **Attach** workspace to target window via `TabManager.attachWorkspace(_:select:)`
+3. If `focus: true`, focus the target window and select the workspace
+
+Source: `Sources/TerminalController.swift:2497`
+
+```swift
+guard let ws = srcTM.detachWorkspace(tabId: wsId) else { ... }
+dstTM.attachWorkspace(ws, select: focus)
+if focus {
+    _ = AppDelegate.shared?.focusMainWindow(windowId: windowId)
+    setActiveTabManager(dstTM)
+}
+```
+
+## State Preservation
+
+The workspace retains:
+- All surfaces (terminals, browsers)
+- Pane layout (splits)
+- Custom title and metadata
+- Notifications
+- Focus history
+
+## Example
+
+### Move to specific window
+
+```bash
+cmux move-workspace-to-window --workspace ws2 --window w2
+```
+
+### Move without focusing
+
+```bash
+cmux move-workspace-to-window --workspace ws2 --window w2 --no-focus
+```
+
+## CLI Implementation
+
+Source: `CLI/cmux.swift:829`
+
+```bash
+cmux move-workspace-to-window --workspace <id|ref> --window <id|ref>
+```
+
+## Socket API
+
+```json
+{
+  "id": "req-1",
+  "method": "workspace.move_to_window",
+  "params": {
+    "workspace_id": "650e8400-e29b-41d4-a716-446655440002",
+    "window_id": "550e8400-e29b-41d4-a716-446655440001",
+    "focus": true
+  }
+}
+```
+
+### Response
+
+```json
+{
+  "ok": true,
+  "result": {
+    "workspace_id": "650e8400-e29b-41d4-a716-446655440002",
+    "workspace_ref": "ws2",
+    "window_id": "550e8400-e29b-41d4-a716-446655440001",
+    "window_ref": "w2"
+  }
+}
+```
+
+## Use Cases
+
+### Organize workspaces across monitors
+
+```bash
+# Move development workspace to monitor 2
+cmux move-workspace-to-window --workspace dev --window w2
+
+# Move database workspace to monitor 1
+cmux move-workspace-to-window --workspace db --window w1
+```
+
+### Consolidate workspaces
+
+```bash
+# Move all workspaces from w2 to w1
+cmux list-workspaces --window w2 --json | \
+  jq -r '.workspaces[].ref' | \
+  xargs -I {} cmux move-workspace-to-window --workspace {} --window w1
+```
+
+## Related Methods
+
+- `window.list` - List available windows
+- `window.create` - Create new window
+- `workspace.list` - List workspaces in a window
+- `workspace.reorder` - Change workspace order within a window
+
+## Implementation
+
+Source: `Sources/TerminalController.swift:2486`
+
+- Thread-safe via `v2MainSync`
+- Uses TabManager detach/attach pattern
+- Updates active TabManager routing when focused

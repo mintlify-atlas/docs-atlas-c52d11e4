@@ -1,0 +1,120 @@
+---
+title: pane.list
+description: List all panes in a workspace
+---
+
+## Overview
+
+Lists all panes in the specified workspace, showing their IDs, surface counts, and focus state.
+
+## Method
+
+```
+pane.list
+```
+
+## Parameters
+
+<ParamField path="workspace_id" type="string">
+  The ID of the workspace to list panes from. If omitted, uses the current workspace.
+</ParamField>
+
+## Response
+
+<ResponseField name="panes" type="array">
+  Array of pane objects in the workspace.
+  
+  <Expandable title="Pane Object">
+    <ResponseField name="pane_id" type="string">
+      The unique identifier for the pane
+    </ResponseField>
+    
+    <ResponseField name="pane_ref" type="string">
+      Human-readable reference (e.g., "p1", "p2")
+    </ResponseField>
+    
+    <ResponseField name="surface_count" type="integer">
+      Number of surfaces contained in this pane
+    </ResponseField>
+    
+    <ResponseField name="focused" type="boolean">
+      Whether this pane currently has focus
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## CLI Usage
+
+```bash
+# List panes in current workspace
+cmux list-panes
+
+# List panes in specific workspace
+cmux list-panes --workspace ws1
+
+# JSON output
+cmux list-panes --json
+```
+
+## CLI Output Example
+
+```
+* p1  [2 surfaces]  [focused]
+  p2  [1 surface]
+  p3  [3 surfaces]
+```
+
+The asterisk (*) indicates the currently focused pane.
+
+## JSON Response Example
+
+```json
+{
+  "panes": [
+    {
+      "pane_id": "550e8400-e29b-41d4-a716-446655440000",
+      "pane_ref": "p1",
+      "surface_count": 2,
+      "focused": true
+    },
+    {
+      "pane_id": "550e8400-e29b-41d4-a716-446655440001",
+      "pane_ref": "p2",
+      "surface_count": 1,
+      "focused": false
+    },
+    {
+      "pane_id": "550e8400-e29b-41d4-a716-446655440002",
+      "pane_ref": "p3",
+      "surface_count": 3,
+      "focused": false
+    }
+  ]
+}
+```
+
+## Understanding Pane Hierarchy
+
+A workspace contains panes, and each pane contains one or more surfaces:
+
+```
+Workspace
+├── Pane 1 (focused)
+│   ├── Surface 1 (terminal)
+│   └── Surface 2 (terminal)
+├── Pane 2
+│   └── Surface 3 (terminal)
+└── Pane 3
+    ├── Surface 4 (terminal)
+    ├── Surface 5 (browser)
+    └── Surface 6 (terminal)
+```
+
+Each pane is a container that can hold multiple surfaces arranged vertically or horizontally.
+
+## Related Methods
+
+- [pane.create](/api/pane/create) - Create a new pane
+- [pane.focus](/api/pane/focus) - Focus a specific pane
+- [pane.surfaces](/api/pane/surfaces) - List surfaces within a pane
+- [workspace.list](/api/workspace/list) - List all workspaces

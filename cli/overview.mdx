@@ -1,0 +1,298 @@
+---
+title: CLI Overview
+description: Install and use the cmux command-line interface
+---
+
+## What is the cmux CLI?
+
+The `cmux` CLI is a command-line tool that lets you control cmux via a Unix socket. You can create and manage windows, workspaces, panes, and surfaces, send text to terminals, read screen content, control browser panels, and more.
+
+## Installation
+
+The CLI is bundled with the cmux app and automatically added to your PATH when you run cmux.
+
+### Verify Installation
+
+Check if cmux is available:
+
+```bash
+command -v cmux
+# /Applications/cmux.app/Contents/MacOS/cmux
+
+cmux version
+# cmux 0.15.0 (123)
+```
+
+## Basic Usage
+
+The cmux CLI follows this structure:
+
+```bash
+cmux [global-flags] <command> [args]
+```
+
+### Global Flags
+
+- `--socket <path>` - Override socket path (default: `/tmp/cmux.sock`)
+- `--json` - Output JSON instead of plain text
+- `--id-format <refs|uuids|both>` - Control ID output format (default: `refs`)
+- `--window <id|ref|index>` - Target a specific window
+- `--password <password>` - Socket authentication password
+- `-v, --version` - Show version information
+- `-h, --help` - Show help message
+
+### Quick Start
+
+```bash
+# Open a directory in a new workspace
+cmux ~/projects/myapp
+
+# Create a new workspace
+cmux new-workspace --cwd ~/code
+
+# List workspaces
+cmux list-workspaces
+
+# Send text to current terminal
+cmux send "echo hello"
+
+# Read terminal screen
+cmux read-screen
+
+# Create a split
+cmux new-split right
+```
+
+## Help Command
+
+Get help on available commands:
+
+```bash
+cmux help
+cmux --help
+cmux -h
+```
+
+Get help on specific commands:
+
+```bash
+cmux list-workspaces --help
+cmux browser --help
+```
+
+## Version Information
+
+Show version and build information:
+
+```bash
+cmux version
+cmux --version
+cmux -v
+```
+
+Example output:
+```
+cmux 0.15.0 (123) [a1b2c3d]
+```
+
+## Environment Variables
+
+cmux automatically sets these variables in terminal shells:
+
+| Variable | Description |
+|----------|-------------|
+| `CMUX_SOCKET_PATH` | Path to the Unix socket (default: `/tmp/cmux.sock`) |
+| `CMUX_WORKSPACE_ID` | UUID of the current workspace |
+| `CMUX_SURFACE_ID` | UUID of the current surface/panel |
+| `CMUX_TAB_ID` | UUID of the current tab (alias for `CMUX_SURFACE_ID`) |
+
+These variables are used as defaults when you don't specify `--workspace` or `--surface` flags.
+
+### Example Usage
+
+```bash
+# These commands use CMUX_WORKSPACE_ID automatically
+cmux list-panels
+cmux send "ls -la"
+cmux notify --title "Done"
+
+# Override with explicit flags
+cmux send --workspace workspace:2 "echo hello"
+```
+
+## Handle Formats
+
+Most commands accept multiple handle formats:
+
+- **UUIDs**: `a1b2c3d4-e5f6-7890-abcd-ef1234567890`
+- **Refs**: `window:1`, `workspace:2`, `pane:3`, `surface:4`, `tab:5`
+- **Indexes**: `0`, `1`, `2` (for listing commands)
+
+### Examples
+
+```bash
+# Using refs (short and readable)
+cmux select-workspace --workspace workspace:2
+cmux focus-pane --pane pane:1
+
+# Using UUIDs (stable across sessions)
+cmux close-surface --surface a1b2c3d4-e5f6-7890-abcd-ef1234567890
+
+# Using indexes (from list output)
+cmux list-workspaces  # Shows workspace:1, workspace:2, etc.
+cmux select-workspace --workspace 1
+```
+
+## Output Formats
+
+### Plain Text (Default)
+
+```bash
+cmux list-workspaces
+#   workspace:1  ~/code
+# * workspace:2  ~/projects  [selected]
+```
+
+### JSON Output
+
+```bash
+cmux list-workspaces --json
+```
+
+```json
+{
+  "workspaces": [
+    {
+      "ref": "workspace:1",
+      "title": "~/code",
+      "selected": false,
+      "index": 0
+    },
+    {
+      "ref": "workspace:2",
+      "title": "~/projects",
+      "selected": true,
+      "index": 1
+    }
+  ]
+}
+```
+
+### ID Format Control
+
+```bash
+# Default: refs only
+cmux list-workspaces --json --id-format refs
+# { "ref": "workspace:1" }
+
+# UUIDs only
+cmux list-workspaces --json --id-format uuids
+# { "id": "a1b2c3d4-..." }
+
+# Both refs and UUIDs
+cmux list-workspaces --json --id-format both
+# { "ref": "workspace:1", "id": "a1b2c3d4-..." }
+```
+
+## Opening Directories
+
+You can open directories directly without using a subcommand:
+
+```bash
+# Open current directory
+cmux .
+
+# Open specific directory
+cmux ~/projects/myapp
+
+# Open parent directory
+cmux ..
+
+# Launch cmux if not running
+cmux ~/code  # Auto-launches app and creates workspace
+```
+
+This is equivalent to:
+
+```bash
+cmux new-workspace --cwd <path>
+```
+
+## Common Commands
+
+### Workspaces
+
+```bash
+# Create workspace
+cmux new-workspace --cwd ~/code
+
+# List workspaces
+cmux list-workspaces
+
+# Select workspace
+cmux select-workspace --workspace workspace:2
+
+# Rename workspace
+cmux rename-workspace --workspace workspace:1 "My Project"
+
+# Close workspace
+cmux close-workspace --workspace workspace:2
+```
+
+### Panes & Splits
+
+```bash
+# Create split
+cmux new-split right
+cmux new-split down
+
+# List panes
+cmux list-panes
+
+# Focus pane
+cmux focus-pane --pane pane:2
+
+# Close surface
+cmux close-surface --surface surface:3
+```
+
+### Terminal Control
+
+```bash
+# Send text
+cmux send "echo hello"
+cmux send "ls -la\n"  # Include newline to execute
+
+# Send keys
+cmux send-key "ctrl+c"
+cmux send-key "ctrl+d"
+
+# Read screen
+cmux read-screen
+cmux read-screen --scrollback
+cmux read-screen --lines 50
+```
+
+### Notifications
+
+```bash
+# Simple notification
+cmux notify --title "Build Complete"
+
+# With body and subtitle
+cmux notify --title "Claude Code" --subtitle "Permission" --body "Approval needed"
+
+# List notifications
+cmux list-notifications
+
+# Clear notifications
+cmux clear-notifications
+```
+
+## Next Steps
+
+- Learn about [Authentication](/cli/authentication) for socket security
+- Explore [Window Management](/cli/windows/list) commands
+- See [Workspace Management](/cli/workspaces/list) for advanced usage
+- Check out [Surface Management](/cli/surfaces/list) for automation
+- Read [Browser Control](/cli/browser/overview) for web automation

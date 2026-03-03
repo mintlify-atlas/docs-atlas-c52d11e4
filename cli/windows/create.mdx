@@ -1,0 +1,53 @@
+---
+title: new-window
+description: Create a new window
+---
+
+Creates a new window in the cmux application.
+
+## Usage
+
+```bash
+cmux new-window
+```
+
+## Output
+
+The command returns the ID of the newly created window:
+
+```
+OK window-id-123
+```
+
+## Examples
+
+### Create a new window
+
+```bash
+cmux new-window
+```
+
+Example output:
+```
+OK 550e8400-e29b-41d4-a716-446655440000
+```
+
+### Create a window and capture its ID
+
+```bash
+WINDOW_ID=$(cmux new-window | awk '{print $2}')
+echo "Created window: $WINDOW_ID"
+```
+
+### Create a window and immediately focus it
+
+```bash
+WINDOW_ID=$(cmux new-window | awk '{print $2}')
+cmux focus-window --window "$WINDOW_ID"
+```
+
+## Related Commands
+
+- [list-windows](/cli/windows/list) - List all open windows
+- [focus-window](/cli/windows/focus) - Focus a specific window
+- [close-window](/cli/windows/close) - Close a window

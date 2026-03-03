@@ -1,0 +1,117 @@
+---
+title: Workspaces
+description: Manage multiple isolated terminal environments with workspace tabs
+---
+
+Workspaces are isolated terminal environments in cmux, similar to tabs in a traditional browser. Each workspace can contain multiple split panes and surfaces, and appears as an entry in the sidebar.
+
+## Creating Workspaces
+
+Create a new workspace using the keyboard shortcut or CLI:
+
+<CodeGroup>
+```bash Keyboard
+Cmd+N
+```
+
+```bash CLI
+cmux workspace create
+```
+</CodeGroup>
+
+## Switching Between Workspaces
+
+<AccordionGroup>
+  <Accordion title="Jump to Specific Workspace">
+    Use `Cmd+1` through `Cmd+8` to jump directly to workspaces 1-8.
+    
+    Use `Cmd+9` to jump to the last workspace.
+  </Accordion>
+
+  <Accordion title="Navigate Sequentially">
+    - `Ctrl+Cmd+]` - Next workspace
+    - `Ctrl+Cmd+[` - Previous workspace
+  </Accordion>
+
+  <Accordion title="Via CLI">
+    ```bash
+    # Switch to a specific workspace
+    cmux workspace select <workspace-id>
+
+    # Go to next/previous
+    cmux workspace next
+    cmux workspace previous
+
+    # Jump to last workspace
+    cmux workspace last
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Renaming Workspaces
+
+Give your workspaces meaningful names to organize your work:
+
+<CodeGroup>
+```bash Keyboard
+Cmd+Shift+R
+```
+
+```bash CLI
+cmux workspace rename <workspace-id> <new-name>
+```
+</CodeGroup>
+
+<Tip>
+Workspace names appear in the sidebar along with git branch, PR status, working directory, and listening ports.
+</Tip>
+
+## Closing Workspaces
+
+<CodeGroup>
+```bash Keyboard
+Cmd+Shift+W
+```
+
+```bash CLI
+cmux workspace close <workspace-id>
+```
+</CodeGroup>
+
+## Workspace Information
+
+The sidebar displays rich metadata for each workspace:
+
+- **Git branch** - Current branch of the working directory
+- **PR status/number** - Linked pull request information
+- **Working directory** - Current directory path
+- **Listening ports** - Active server ports
+- **Latest notification** - Most recent notification text
+
+## Managing the Sidebar
+
+Toggle the workspace sidebar visibility:
+
+```bash
+Cmd+B
+```
+
+## Scriptable API
+
+Workspaces are fully scriptable through the CLI and socket API:
+
+```bash
+# List all workspaces
+cmux workspace list
+
+# Get current workspace
+cmux workspace current
+
+# Move workspace to another window
+cmux workspace move <workspace-id> <window-id>
+```
+
+<Card title="Related" icon="link">
+  - [Split Panes](/features/split-panes) - Divide workspaces into multiple panes
+  - [Vertical Tabs](/features/vertical-tabs) - Sidebar workspace metadata
+</Card>

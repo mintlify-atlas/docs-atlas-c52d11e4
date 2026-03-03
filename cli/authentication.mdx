@@ -1,0 +1,274 @@
+---
+title: CLI Authentication
+description: Secure your cmux socket with password authentication
+---
+
+## Overview
+
+The cmux CLI communicates with the app via a Unix socket. By default, the socket is owned by your user account and protected by filesystem permissions. For additional security, you can enable password authentication.
+
+## Socket Path
+
+The default socket path is `/tmp/cmux.sock`. You can override it with:
+
+```bash
+# Via flag
+cmux --socket /custom/path/cmux.sock <command>
+
+# Via environment variable
+export CMUX_SOCKET_PATH=/custom/path/cmux.sock
+cmux <command>
+```
+
+## Password Authentication
+
+When password protection is enabled in cmux settings, CLI commands require authentication.
+
+### Password Resolution Order
+
+The CLI resolves passwords in this order:
+
+1. **`--password` flag** (highest priority)
+2. **`CMUX_SOCKET_PASSWORD` environment variable**
+3. **Saved password file** (lowest priority)
+
+### Using the `--password` Flag
+
+```bash
+cmux --password "your-password" list-workspaces
+cmux --password "secret123" new-workspace --cwd ~/code
+```
+
+### Using Environment Variable
+
+Set the password once in your shell session:
+
+```bash
+export CMUX_SOCKET_PASSWORD="your-password"
+cmux list-workspaces
+cmux new-workspace --cwd ~/code
+```
+
+Add to your shell profile for persistence:
+
+```bash
+# ~/.zshrc or ~/.bashrc
+export CMUX_SOCKET_PASSWORD="your-password"
+```
+
+### Saved Password File
+
+When you set a password in cmux Settings, it's automatically saved to:
+
+```
+~/Library/Application Support/cmux/socket-control-password
+```
+
+The CLI reads this file automatically, so you don't need to provide the password for every command.
+
+## Password Modes
+
+cmux supports three socket authentication modes (configured in Settings):
+
+### 1. Allow All (Default)
+
+No password required. Socket access is controlled by filesystem permissions only.
+
+```bash
+# Works without password
+cmux list-workspaces
+```
+
+### 2. Require Password
+
+All connections must authenticate with the configured password.
+
+```bash
+# Without password - fails
+cmux list-workspaces
+# ERROR: Access denied ...
+
+# With password - works
+export CMUX_SOCKET_PASSWORD="your-password"
+cmux list-workspaces
+```
+
+### 3. Allow User
+
+Only connections from processes owned by the same user are allowed, with optional password for extra security.
+
+```bash
+# Same user - works
+cmux list-workspaces
+
+# Different user - fails
+sudo cmux list-workspaces
+# ERROR: Socket at /tmp/cmux.sock is not owned by the current user
+```
+
+## Authentication Errors
+
+### Access Denied
+
+```bash
+cmux list-workspaces
+# ERROR: Access denied - password required
+```
+
+**Solution**: Provide password via `--password`, `CMUX_SOCKET_PASSWORD`, or check saved password file.
+
+### Socket Not Found
+
+```bash
+cmux list-workspaces
+# Socket not found at /tmp/cmux.sock
+```
+
+**Solution**: Make sure cmux is running, or check `CMUX_SOCKET_PATH`.
+
+### Wrong Owner
+
+```bash
+sudo cmux list-workspaces
+# ERROR: Socket at /tmp/cmux.sock is not owned by the current user — refusing to connect
+```
+
+**Solution**: Run cmux commands as your user account, not root.
+
+### Invalid Password
+
+```bash
+cmux --password "wrong" list-workspaces
+# ERROR: Access denied - invalid password
+```
+
+**Solution**: Check your password in cmux Settings or the saved password file.
+
+## Security Best Practices
+
+### Filesystem Permissions
+
+The socket is created with user-only permissions:
+
+```bash
+ls -l /tmp/cmux.sock
+# srwx------  1 youruser  wheel  0 Jan 1 12:00 /tmp/cmux.sock
+```
+
+This prevents other users from accessing it, even without password authentication.
+
+### Password Storage
+
+If using `CMUX_SOCKET_PASSWORD`:
+
+- Don't commit passwords to version control
+- Use shell profile files with restricted permissions:
+  ```bash
+  chmod 600 ~/.zshrc
+  ```
+- Consider using a secrets manager instead of plaintext
+
+### Multi-User Systems
+
+On shared systems:
+
+1. Enable "Require Password" mode in Settings
+2. Set a strong password
+3. Don't store password in environment variables (use the saved file)
+
+### CI/CD & Automation
+
+For automated scripts:
+
+```bash
+# Use --password flag with secrets
+cmux --password "$CMUX_PASSWORD" notify --title "Build Complete"
+
+# Or set environment variable
+export CMUX_SOCKET_PASSWORD="$CMUX_PASSWORD"
+cmux notify --title "Deployment Done"
+```
+
+## Advanced: Custom Socket Paths
+
+When running multiple cmux instances (e.g., dev and staging):
+
+```bash
+# Development (default)
+export CMUX_SOCKET_PATH=/tmp/cmux-dev.sock
+export CMUX_SOCKET_PASSWORD="dev-password"
+cmux list-workspaces
+
+# Staging
+export CMUX_SOCKET_PATH=/tmp/cmux-staging.sock
+export CMUX_SOCKET_PASSWORD="staging-password"
+cmux list-workspaces
+```
+
+## Troubleshooting
+
+### Check Socket Exists
+
+```bash
+ls -l /tmp/cmux.sock
+cat /tmp/cmux-last-debug-log-path 2>/dev/null
+```
+
+### Test Connection
+
+```bash
+cmux ping
+# pong
+```
+
+### Check Authentication
+
+```bash
+# Test with explicit password
+cmux --password "test" ping
+
+# Check saved password file
+cat ~/Library/Application\ Support/cmux/socket-control-password
+```
+
+### Verify Environment
+
+```bash
+echo $CMUX_SOCKET_PATH
+echo $CMUX_SOCKET_PASSWORD
+echo $CMUX_WORKSPACE_ID
+```
+
+## Example: Secure Setup
+
+For a secure cmux CLI setup:
+
+1. **Enable password in Settings**
+   - Open cmux Settings
+   - Navigate to Socket Authentication
+   - Select "Require Password"
+   - Set a strong password
+
+2. **Verify password is saved**
+   ```bash
+   cat ~/Library/Application\ Support/cmux/socket-control-password
+   ```
+
+3. **Test authentication**
+   ```bash
+   cmux ping
+   # pong
+   ```
+
+4. **For CI/CD, use environment variable**
+   ```bash
+   export CMUX_SOCKET_PASSWORD="your-password"
+   cmux notify --title "Build Complete"
+   ```
+
+## Next Steps
+
+- Explore [Window Management](/cli/windows/list) commands
+- Learn about [Workspace Control](/cli/workspaces/list)
+- See [Surface Management](/cli/surfaces/list) for automation examples
+- Check out [Browser Control](/cli/browser/overview) for web automation

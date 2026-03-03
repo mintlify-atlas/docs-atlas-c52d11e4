@@ -1,0 +1,153 @@
+---
+title: surface.split
+description: Create a new surface by splitting
+---
+
+Creates a new terminal surface by splitting the current or specified surface in the given direction.
+
+## Method
+
+```
+surface.split
+```
+
+## Parameters
+
+<ParamField path="direction" type="string" required>
+  The direction to split: `left`, `right`, `up`, or `down`
+</ParamField>
+
+<ParamField path="surface_id" type="string">
+  The UUID or reference of the surface to split from. If not provided, uses the currently focused surface.
+</ParamField>
+
+<ParamField path="workspace_id" type="string">
+  The UUID of the workspace. If not provided, uses the currently selected workspace.
+</ParamField>
+
+<ParamField path="window_id" type="string">
+  The UUID of the window to target. If not provided, uses the current window.
+</ParamField>
+
+## Split Directions
+
+- **`left`**: Creates a new pane to the left (vertical split)
+- **`right`**: Creates a new pane to the right (vertical split)
+- **`up`**: Creates a new pane above (horizontal split)
+- **`down`**: Creates a new pane below (horizontal split)
+
+## Response
+
+Returns an object with the newly created surface's information:
+
+<ResponseField name="surface_id" type="string">
+  The UUID of the newly created surface
+</ResponseField>
+
+<ResponseField name="surface_ref" type="string">
+  The human-readable reference for the surface
+</ResponseField>
+
+<ResponseField name="pane_id" type="string">
+  The UUID of the newly created pane
+</ResponseField>
+
+<ResponseField name="pane_ref" type="string">
+  The human-readable reference for the pane
+</ResponseField>
+
+<ResponseField name="workspace_id" type="string">
+  The UUID of the workspace
+</ResponseField>
+
+<ResponseField name="workspace_ref" type="string">
+  The human-readable reference for the workspace
+</ResponseField>
+
+<ResponseField name="window_id" type="string">
+  The UUID of the window
+</ResponseField>
+
+<ResponseField name="window_ref" type="string">
+  The human-readable reference for the window
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  The type of the created surface (always `terminal`)
+</ResponseField>
+
+## Example
+
+<CodeGroup>
+```json Split Right
+{
+  "id": "1",
+  "method": "surface.split",
+  "params": {
+    "direction": "right"
+  }
+}
+```
+
+```json Split Down from Specific Surface
+{
+  "id": "2",
+  "method": "surface.split",
+  "params": {
+    "direction": "down",
+    "surface_id": "surface:1"
+  }
+}
+```
+
+```json Response
+{
+  "ok": true,
+  "result": {
+    "surface_id": "aa0e8400-e29b-41d4-a716-446655440000",
+    "surface_ref": "surface:4",
+    "pane_id": "bb0e8400-e29b-41d4-a716-446655440000",
+    "pane_ref": "pane:2",
+    "workspace_id": "550e8400-e29b-41d4-a716-446655440000",
+    "workspace_ref": "workspace:1",
+    "window_id": "660e8400-e29b-41d4-a716-446655440000",
+    "window_ref": "window:1",
+    "type": "terminal"
+  }
+}
+```
+</CodeGroup>
+
+## CLI Usage
+
+```bash
+# Split right from focused surface
+cmux new-split right
+
+# Split down from specific surface
+cmux new-split --surface surface:1 down
+```
+
+## Errors
+
+<ResponseField name="not_found" type="error">
+  The specified surface does not exist or no surface is focused
+</ResponseField>
+
+<ResponseField name="invalid_params" type="error">
+  Invalid direction specified (must be left, right, up, or down)
+</ResponseField>
+
+## Notes
+
+- Splitting creates a new pane and a new terminal surface in that pane
+- The new surface is automatically focused
+- `left` and `right` create vertical splits (side-by-side panes)
+- `up` and `down` create horizontal splits (stacked panes)
+- The split direction is relative to the source surface
+
+## See Also
+
+- [surface.create](/api/surface/create) - Create a surface in an existing pane
+- [pane.create](/api/pane/create) - Create a pane with more control
+- [surface.move](/api/surface/move) - Move a surface to a different pane

@@ -1,0 +1,164 @@
+---
+title: surface.reorder
+description: Reorder a surface within its pane
+---
+
+Changes the position of a surface within its containing pane without moving it to a different pane.
+
+## Method
+
+```
+surface.reorder
+```
+
+## Parameters
+
+<ParamField path="surface_id" type="string" required>
+  The UUID or reference of the surface to reorder
+</ParamField>
+
+<ParamField path="index" type="number">
+  The new 0-based index position in the pane
+</ParamField>
+
+<ParamField path="before_surface_id" type="string">
+  Place the surface before this surface (must be in the same pane)
+</ParamField>
+
+<ParamField path="after_surface_id" type="string">
+  Place the surface after this surface (must be in the same pane)
+</ParamField>
+
+## Positioning
+
+You must specify **exactly one** of:
+
+1. **`index`**: Explicit 0-based position in the pane
+2. **`before_surface_id`**: Position immediately before the specified surface
+3. **`after_surface_id`**: Position immediately after the specified surface
+
+## Response
+
+Returns an object confirming the reorder operation:
+
+<ResponseField name="surface_id" type="string">
+  The UUID of the reordered surface
+</ResponseField>
+
+<ResponseField name="surface_ref" type="string">
+  The human-readable reference for the surface
+</ResponseField>
+
+<ResponseField name="pane_id" type="string">
+  The UUID of the containing pane
+</ResponseField>
+
+<ResponseField name="pane_ref" type="string">
+  The human-readable reference for the pane
+</ResponseField>
+
+<ResponseField name="workspace_id" type="string">
+  The UUID of the workspace
+</ResponseField>
+
+<ResponseField name="workspace_ref" type="string">
+  The human-readable reference for the workspace
+</ResponseField>
+
+<ResponseField name="window_id" type="string">
+  The UUID of the window
+</ResponseField>
+
+<ResponseField name="window_ref" type="string">
+  The human-readable reference for the window
+</ResponseField>
+
+## Example
+
+<CodeGroup>
+```json Reorder to Index
+{
+  "id": "1",
+  "method": "surface.reorder",
+  "params": {
+    "surface_id": "surface:3",
+    "index": 0
+  }
+}
+```
+
+```json Reorder Before Another Surface
+{
+  "id": "2",
+  "method": "surface.reorder",
+  "params": {
+    "surface_id": "770e8400-e29b-41d4-a716-446655440000",
+    "before_surface_id": "surface:2"
+  }
+}
+```
+
+```json Reorder After Another Surface
+{
+  "id": "3",
+  "method": "surface.reorder",
+  "params": {
+    "surface_id": "surface:1",
+    "after_surface_id": "surface:4"
+  }
+}
+```
+
+```json Response
+{
+  "ok": true,
+  "result": {
+    "surface_id": "770e8400-e29b-41d4-a716-446655440000",
+    "surface_ref": "surface:1",
+    "pane_id": "880e8400-e29b-41d4-a716-446655440000",
+    "pane_ref": "pane:1",
+    "workspace_id": "550e8400-e29b-41d4-a716-446655440000",
+    "workspace_ref": "workspace:1",
+    "window_id": "660e8400-e29b-41d4-a716-446655440000",
+    "window_ref": "window:1"
+  }
+}
+```
+</CodeGroup>
+
+## CLI Usage
+
+```bash
+# Reorder to specific index
+cmux reorder-surface --surface surface:3 --index 0
+
+# Reorder before another surface
+cmux reorder-surface --surface surface:1 --before surface:2
+
+# Reorder after another surface
+cmux reorder-surface --surface surface:1 --after surface:4
+```
+
+## Errors
+
+<ResponseField name="not_found" type="error">
+  The specified surface does not exist
+</ResponseField>
+
+<ResponseField name="invalid_params" type="error">
+  - Must specify exactly one of `index`, `before_surface_id`, or `after_surface_id`
+  - Anchor surface must be in the same pane as the surface being reordered
+</ResponseField>
+
+## Notes
+
+- Reordering only changes the surface's position within its current pane
+- To move a surface to a different pane, use [surface.move](/api/surface/move)
+- The anchor surface (`before_surface_id` or `after_surface_id`) must be in the same pane
+- Surface IDs remain stable after reordering
+
+## See Also
+
+- [surface.move](/api/surface/move) - Move surface to different pane/workspace
+- [workspace.list](/api/workspace/list) - List workspaces
+- [surface.list](/api/surface/list) - View current surface order

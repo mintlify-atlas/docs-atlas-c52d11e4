@@ -1,0 +1,335 @@
+---
+title: "notification.send"
+description: "Send a notification to the current workspace and focused surface"
+---
+
+The `notification.create` method sends a notification to cmux that appears in the notification panel and triggers a macOS system notification.
+
+## Method
+
+```json
+{
+  "id": "notif-1",
+  "method": "notification.create",
+  "params": {
+    "title": "Build Complete",
+    "subtitle": "Success",
+    "body": "All tests passed",
+    "workspace_id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+  }
+}
+```
+
+## Parameters
+
+<ParamField path="title" type="string" default="Notification">
+  Notification title text
+</ParamField>
+
+<ParamField path="subtitle" type="string" default="">
+  Optional notification subtitle
+</ParamField>
+
+<ParamField path="body" type="string" default="">
+  Notification body text content
+</ParamField>
+
+<ParamField path="workspace_id" type="string">
+  Target workspace UUID. If not provided, uses the workspace associated with the socket caller.
+</ParamField>
+
+## Response
+
+Returns the workspace and surface where the notification was created:
+
+```json
+{
+  "ok": true,
+  "result": {
+    "workspace_id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+    "surface_id": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e"
+  }
+}
+```
+
+<ResponseField name="workspace_id" type="string" required>
+  UUID of the workspace where the notification was created
+</ResponseField>
+
+<ResponseField name="surface_id" type="string | null">
+  UUID of the focused surface at notification creation time, or `null` if no surface was focused
+</ResponseField>
+
+## Targeting Options
+
+There are three methods for targeting notifications:
+
+### 1. notification.create (Current Workspace)
+
+Sends to the workspace associated with the socket caller's context:
+
+```json
+{
+  "method": "notification.create",
+  "params": {
+    "title": "Status Update",
+    "body": "Process complete"
+  }
+}
+```
+
+### 2. notification.create_for_surface (Specific Surface)
+
+Target a specific surface by UUID:
+
+```json
+{
+  "method": "notification.create_for_surface",
+  "params": {
+    "workspace_id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+    "surface_id": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+    "title": "Panel Update",
+    "body": "Task finished"
+  }
+}
+```
+
+<ParamField path="workspace_id" type="string" required>
+  Workspace UUID containing the surface
+</ParamField>
+
+<ParamField path="surface_id" type="string" required>
+  Surface UUID to associate with the notification
+</ParamField>
+
+### 3. notification.create_for_target (Explicit Target)
+
+Directly specify both workspace and surface UUIDs:
+
+```json
+{
+  "method": "notification.create_for_target",
+  "params": {
+    "workspace_id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+    "surface_id": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+    "title": "Deploy Status",
+    "subtitle": "Production",
+    "body": "Deployment complete"
+  }
+}
+```
+
+Both `workspace_id` and `surface_id` are required for this method.
+
+## Notification Behavior
+
+### Panel Display
+
+Notifications appear in the cmux notification panel with:
+- Unread indicator (blue dot)
+- Workspace/surface association
+- Timestamp
+- Title, subtitle, and body content
+
+### System Notifications
+
+macOS system notifications are triggered unless:
+- The app is focused AND
+- The target workspace is active AND
+- The target surface is focused
+
+This prevents notification spam when the user is actively working in the target panel.
+
+### Auto-read Behavior
+
+Notifications are automatically marked as read when:
+- The associated surface receives focus
+- The user is actively viewing that panel
+
+### Workspace Reordering
+
+If workspace auto-reorder is enabled in settings, creating a notification will move the target workspace to the top of the workspace list.
+
+## Notification Object Schema
+
+Each notification has the following structure:
+
+```typescript
+interface Notification {
+  id: string;              // UUID
+  tabId: string;           // Workspace UUID
+  surfaceId: string | null; // Surface UUID or null
+  title: string;
+  subtitle: string;
+  body: string;
+  createdAt: Date;
+  isRead: boolean;
+}
+```
+
+## Examples
+
+### Basic Notification
+
+```json
+{
+  "id": "req-1",
+  "method": "notification.create",
+  "params": {
+    "title": "Task Complete",
+    "body": "Your build finished successfully"
+  }
+}
+```
+
+### With Subtitle
+
+```json
+{
+  "id": "req-2",
+  "method": "notification.create",
+  "params": {
+    "title": "Claude Code",
+    "subtitle": "Permission Required",
+    "body": "Please review and approve the changes"
+  }
+}
+```
+
+### Multi-line Body
+
+```json
+{
+  "id": "req-3",
+  "method": "notification.create",
+  "params": {
+    "title": "Test Results",
+    "body": "5 tests passed\n2 tests failed\n1 test skipped"
+  }
+}
+```
+
+### Target Specific Panel
+
+```json
+{
+  "id": "req-4",
+  "method": "notification.create_for_surface",
+  "params": {
+    "workspace_id": "550e8400-e29b-41d4-a716-446655440000",
+    "surface_id": "660f9511-f3ac-52e5-b827-557766551111",
+    "title": "Log Update",
+    "subtitle": "Server",
+    "body": "New errors detected in application.log"
+  }
+}
+```
+
+## Error Responses
+
+### Workspace Not Found
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "not_found",
+    "message": "Workspace not found",
+    "data": null
+  }
+}
+```
+
+### Surface Not Found
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "not_found",
+    "message": "Surface not found",
+    "data": {
+      "surface_id": "invalid-uuid"
+    }
+  }
+}
+```
+
+### Invalid Parameters
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "invalid_params",
+    "message": "Missing or invalid surface_id",
+    "data": null
+  }
+}
+```
+
+## Implementation Details
+
+From `Sources/TerminalController.swift:4741-4838`:
+
+```swift
+private func v2NotificationCreate(params: [String: Any]) -> V2CallResult {
+    guard let tabManager = v2ResolveTabManager(params: params) else {
+        return .err(code: "unavailable", message: "TabManager not available", data: nil)
+    }
+
+    let title = (params["title"] as? String) ?? "Notification"
+    let subtitle = (params["subtitle"] as? String) ?? ""
+    let body = (params["body"] as? String) ?? ""
+
+    var result: V2CallResult = .err(code: "internal_error", message: "Failed to notify", data: nil)
+    v2MainSync {
+        guard let ws = v2ResolveWorkspace(params: params, tabManager: tabManager) else {
+            result = .err(code: "not_found", message: "Workspace not found", data: nil)
+            return
+        }
+        let surfaceId = ws.focusedPanelId
+        TerminalNotificationStore.shared.addNotification(
+            tabId: ws.id,
+            surfaceId: surfaceId,
+            title: title,
+            subtitle: subtitle,
+            body: body
+        )
+        result = .ok(["workspace_id": ws.id.uuidString, "surface_id": v2OrNull(surfaceId?.uuidString)])
+    }
+    return result
+}
+```
+
+## CLI Equivalent
+
+The CLI `notify` command provides a convenient wrapper:
+
+```bash
+cmux notify --title "Build Complete" --body "All tests passed"
+```
+
+See [CLI notify command](/cli/notifications/send) for details.
+
+## Best Practices
+
+1. **Keep titles concise** - Use 2-5 words for the title
+2. **Use subtitle for context** - Add source/category info in subtitle
+3. **Include actionable info in body** - Tell users what happened and what to do
+4. **Avoid notification spam** - Coalesce related updates
+5. **Target appropriately** - Use specific surface targeting when relevant
+6. **Test notification suppression** - Verify focused panels don't show system notifications
+
+## Related Methods
+
+- [notification.list](/api/notifications/list) - List all notifications
+- [notification.clear](/api/notifications/clear) - Clear all notifications
+- [workspace.list](/api/workspace/list) - Get workspace IDs for targeting
+- [surface.list](/api/surface/list) - Get surface IDs for targeting
+
+## See Also
+
+- [Notification Feature Guide](/features/notifications)
+- [Socket API Reference](/configuration/socket-api)
+- [Environment Variables](/cli/overview#environment-variables)

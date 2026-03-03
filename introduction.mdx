@@ -1,0 +1,65 @@
+---
+title: Introduction
+description: A Ghostty-based macOS terminal with vertical tabs and notifications for AI coding agents
+---
+
+cmux is a native macOS terminal built with Swift and AppKit, designed for developers running multiple AI coding agents in parallel. It uses libghostty for GPU-accelerated terminal rendering and reads your existing `~/.config/ghostty/config` for themes, fonts, and colors.
+
+## What is cmux?
+
+cmux provides a terminal and browser with a CLI to control them. It's built as a primitive, not a prescriptive solution. You get workspaces, tabs, split panes, notifications, and a scriptable API—what you build with these primitives is yours.
+
+The app features a sidebar with vertical tabs showing git branch, linked PR status/number, working directory, listening ports, and the latest notification text for each workspace. When an agent needs attention, its pane gets a blue ring and the tab lights up in the sidebar.
+
+## Why use cmux?
+
+If you run Claude Code, Codex, or OpenCode sessions in parallel, you know the challenge: macOS notifications lack context, and with enough tabs open, titles become unreadable. cmux solves this by:
+
+- **Visual notification rings** - Panes get a blue ring when agents need your attention
+- **Notification panel** - See all pending notifications in one place, jump to the most recent unread with Cmd+Shift+U
+- **Context in the sidebar** - Every tab shows the latest notification text, so you know which agent needs you
+- **Native performance** - Built with Swift and AppKit, not Electron. Fast startup, low memory usage
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Notification System" icon="bell">
+    Panes get a blue ring and tabs light up when coding agents need your attention. See all pending notifications in the dedicated panel.
+  </Card>
+  <Card title="In-App Browser" icon="browser">
+    Split a browser alongside your terminal with a scriptable API ported from agent-browser. Agents can interact with your dev server directly.
+  </Card>
+  <Card title="Vertical + Horizontal Tabs" icon="table-columns">
+    Sidebar shows git branch, PR status, working directory, listening ports, and notification text. Split horizontally and vertically.
+  </Card>
+  <Card title="Scriptable" icon="code">
+    CLI and socket API to create workspaces, split panes, send keystrokes, and automate the browser.
+  </Card>
+  <Card title="Ghostty Compatible" icon="terminal">
+    Reads your existing `~/.config/ghostty/config` for themes, fonts, and colors. GPU-accelerated rendering via libghostty.
+  </Card>
+  <Card title="Native macOS App" icon="apple">
+    Built with Swift and AppKit. Fast startup, low memory footprint, and seamless macOS integration.
+  </Card>
+</CardGroup>
+
+## The Zen of cmux
+
+cmux is not prescriptive about how developers hold their tools. It's a terminal and browser with a CLI, and the rest is up to you.
+
+cmux is a primitive, not a solution. It gives you a terminal, a browser, notifications, workspaces, splits, tabs, and a CLI to control all of it. cmux doesn't force you into an opinionated way to use coding agents. What you build with the primitives is yours.
+
+The best developers have always built their own tools. Nobody has figured out the best way to work with agents yet, and the teams building closed products definitely haven't either. The developers closest to their own codebases will figure it out first.
+
+Give a million developers composable primitives and they'll collectively find the most efficient workflows faster than any product team could design top-down.
+
+## What's Next?
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install cmux via DMG or Homebrew
+  </Card>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get your first workspace running with notifications
+  </Card>
+</CardGroup>

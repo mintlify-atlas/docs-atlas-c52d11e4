@@ -1,0 +1,142 @@
+---
+title: Codex Integration
+description: Configure Codex notify command for cmux notifications
+---
+
+OpenAI Codex supports a `notify` configuration that can trigger notifications when turns complete.
+
+## Configuration
+
+Add to `~/.codex/config.toml`:
+
+<CodeGroup>
+```toml Inline Command
+notify = ["bash", "-c", "command -v cmux &>/dev/null && cmux notify --title Codex --body \"$(echo $1 | jq -r '.\"last-assistant-message\" // \"Turn complete\"' 2>/dev/null | head -c 100)\" || osascript -e 'display notification \"Turn complete\" with title \"Codex\"'", "--"]
+```
+
+```toml External Script
+notify = ["bash", "~/.local/bin/codex-notify.sh"]
+```
+</CodeGroup>
+
+## Setup Steps
+
+<Steps>
+  <Step title="Choose configuration method">
+    Select either inline command or external script approach
+  </Step>
+  
+  <Step title="Configure Codex">
+    Add the configuration to `~/.codex/config.toml`
+  </Step>
+  
+  <Step title="Create script (if using external method)">
+    If using external script, create `~/.local/bin/codex-notify.sh` (see below)
+  </Step>
+  
+  <Step title="Test the integration">
+    Run a Codex session and verify notifications appear when turns complete
+  </Step>
+</Steps>
+
+## External Script Method
+
+Create `~/.local/bin/codex-notify.sh`:
+
+```bash
+#!/bin/bash
+MSG=$(echo "$1" | jq -r '."last-assistant-message" // "Turn complete"' 2>/dev/null | head -c 100)
+command -v cmux &>/dev/null && cmux notify --title "Codex" --body "$MSG" || osascript -e "display notification \"$MSG\" with title \"Codex\""
+```
+
+Make it executable:
+
+```bash
+chmod +x ~/.local/bin/codex-notify.sh
+```
+
+Then update `~/.codex/config.toml`:
+
+```toml
+notify = ["bash", "~/.local/bin/codex-notify.sh"]
+```
+
+## How It Works
+
+1. **Codex sends turn data** - JSON with `last-assistant-message` field
+2. **Script extracts message** - Uses `jq` to parse JSON, falls back to "Turn complete"
+3. **Truncate long messages** - Limits to 100 characters with `head -c 100`
+4. **Send notification** - Tries cmux first, falls back to osascript
+
+## Notification Content
+
+The notification includes:
+- **Title**: "Codex"
+- **Body**: Last assistant message (up to 100 characters) or "Turn complete"
+
+## Fallback Behavior
+
+The configuration includes automatic fallback:
+
+1. **cmux available** - Notifications appear in cmux panel with visual indicators
+2. **cmux not available** - Falls back to macOS system notifications via `osascript`
+
+## Visual Indicators
+
+When Codex sends a notification:
+- The terminal pane gets a **blue ring**
+- The workspace tab **lights up** in the sidebar
+- The notification appears in the **notifications panel** (⌘I)
+- Press **⌘⇧U** to jump to the most recent unread notification
+
+## Customization
+
+You can customize the notification script to include more context:
+
+```bash
+#!/bin/bash
+# Extract multiple fields from Codex JSON
+MSG=$(echo "$1" | jq -r '."last-assistant-message" // "Turn complete"' 2>/dev/null | head -c 100)
+STATUS=$(echo "$1" | jq -r '.status // ""' 2>/dev/null)
+
+# Add subtitle based on status
+if [ -n "$STATUS" ]; then
+  command -v cmux &>/dev/null && cmux notify --title "Codex" --subtitle "$STATUS" --body "$MSG" || osascript -e "display notification \"$MSG\" with title \"Codex\""
+else
+  command -v cmux &>/dev/null && cmux notify --title "Codex" --body "$MSG" || osascript -e "display notification \"$MSG\" with title \"Codex\""
+fi
+```
+
+## Dependencies
+
+The inline command and script require:
+- **bash** - Shell interpreter
+- **jq** - JSON parser (install with `brew install jq`)
+- **cmux** - For cmux notifications (optional, falls back to osascript)
+
+Install jq if not available:
+
+```bash
+brew install jq
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Notifications not appearing">
+    - Verify `~/.codex/config.toml` is valid TOML
+    - Check that jq is installed: `command -v jq`
+    - Test the command manually with sample JSON
+    - Ensure Codex has been restarted
+  </Accordion>
+  
+  <Accordion title="Script permission denied">
+    - Make the script executable: `chmod +x ~/.local/bin/codex-notify.sh`
+    - Verify the script path in config.toml is correct
+  </Accordion>
+  
+  <Accordion title="JSON parsing errors">
+    - Install jq: `brew install jq`
+    - Verify Codex is sending valid JSON to the notify command
+  </Accordion>
+</AccordionGroup>

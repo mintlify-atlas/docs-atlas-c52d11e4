@@ -1,0 +1,170 @@
+---
+title: select-workspace
+description: Switch to a different workspace in the current window
+---
+
+## Syntax
+
+```bash
+cmux select-workspace --workspace <id|ref>
+```
+
+## Description
+
+Switches focus to the specified workspace within the current window, making it the active workspace.
+
+## Options
+
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--workspace <id\|ref>` | Yes | The workspace to select (UUID or short ref like `workspace:2`) |
+| `--window <id>` | No | Target a specific window (must appear before the command) |
+| `--json` | No | Output result in JSON format |
+| `--id-format` | No | Control ID output format: `refs` (default), `uuids`, or `both` |
+
+## Output Format
+
+### Text Output (default)
+
+Returns a success message with the workspace ID:
+
+```
+OK workspace:2
+```
+
+### JSON Output
+
+Returns an object with the selected workspace information:
+
+```json
+{
+  "workspace_ref": "workspace:2",
+  "workspace_id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+}
+```
+
+## Workspace Identification
+
+You can identify workspaces using either:
+
+### Short References
+- `workspace:1` - First workspace in the window
+- `workspace:2` - Second workspace
+- etc.
+
+Get these from `list-workspaces` command.
+
+### UUIDs
+- Full workspace UUID (e.g., `6ba7b810-9dad-11d1-80b4-00c04fd430c8`)
+
+Get these from `list-workspaces --json --id-format uuids`.
+
+## Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `CMUX_WORKSPACE_ID` | Not used for this command (it's the target, not source) |
+
+The command operates on the currently focused window unless `--window` is specified.
+
+## Examples
+
+### Select a workspace by short reference
+
+```bash
+cmux select-workspace --workspace workspace:1
+```
+
+### Select using UUID
+
+```bash
+cmux select-workspace --workspace 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+```
+
+### Select workspace with JSON output
+
+```bash
+cmux select-workspace --workspace workspace:3 --json
+```
+
+### Select workspace in a different window
+
+```bash
+cmux --window window:2 select-workspace --workspace workspace:1
+```
+
+### Cycle to next workspace
+
+```bash
+#!/bin/bash
+# Get current workspace number and total count
+CURRENT=$(cmux list-workspaces --json | jq -r '.workspaces[] | select(.selected) | .ref' | cut -d: -f2)
+TOTAL=$(cmux list-workspaces --json | jq '.workspaces | length')
+
+# Calculate next workspace (wrap around)
+NEXT=$(( (CURRENT % TOTAL) + 1 ))
+
+cmux select-workspace --workspace "workspace:$NEXT"
+```
+
+### Return to first workspace
+
+```bash
+cmux select-workspace --workspace workspace:1
+```
+
+### Select workspace by title
+
+```bash
+#!/bin/bash
+# Find and select workspace by partial title match
+TARGET_TITLE="$1"
+
+WS_REF=$(cmux list-workspaces --json | \
+  jq -r --arg title "$TARGET_TITLE" \
+  '.workspaces[] | select(.title | contains($title)) | .ref' | \
+  head -1)
+
+if [ -n "$WS_REF" ]; then
+  cmux select-workspace --workspace "$WS_REF"
+  echo "Switched to $WS_REF"
+else
+  echo "No workspace found with title containing '$TARGET_TITLE'"
+  exit 1
+fi
+```
+
+### Create and select in one flow
+
+```bash
+# Create new workspace and switch to it
+NEW_WS=$(cmux new-workspace --cwd ~/project | awk '{print $2}')
+cmux select-workspace --workspace "$NEW_WS"
+```
+
+## Behavior
+
+- Selecting a workspace makes it visible and focused in its window
+- The workspace's focused surface receives keyboard input
+- Previous workspace remains in the background
+- Window focus is not changed if targeting a non-current window with `--window`
+
+## Error Handling
+
+The command will fail if:
+- The specified workspace doesn't exist
+- The workspace ID/ref is invalid
+- The target window doesn't exist (when using `--window`)
+
+```bash
+$ cmux select-workspace --workspace workspace:99
+ERROR: Workspace not found
+```
+
+## Related Commands
+
+- [list-workspaces](/cli/workspaces/list) - View all available workspaces
+- [new-workspace](/cli/workspaces/create) - Create a new workspace
+- [close-workspace](/cli/workspaces/close) - Close a workspace
+- [rename-workspace](/cli/workspaces/rename) - Change workspace title
+- [list-workspaces](/cli/workspaces/list) - List and navigate workspaces

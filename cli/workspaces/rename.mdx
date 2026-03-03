@@ -1,0 +1,229 @@
+---
+title: rename-workspace
+description: Set or change a workspace's title
+---
+
+## Syntax
+
+```bash
+cmux rename-workspace [--workspace <id|ref>] [--] <title>
+```
+
+Alias: `rename-window` (same functionality)
+
+## Description
+
+Sets the display title for a workspace. The title appears in the workspace tab and helps identify workspaces by their purpose or content.
+
+## Options
+
+| Flag | Description |
+|------|-------------|
+| `--workspace <id\|ref>` | Target workspace (defaults to `$CMUX_WORKSPACE_ID` if not specified) |
+| `--window <id>` | Target window (must appear before the command; affects default workspace) |
+| `--json` | Output result in JSON format |
+| `--id-format` | Control ID output format: `refs` (default), `uuids`, or `both` |
+| `--` | Optional separator before title (useful if title starts with `-`) |
+
+## Arguments
+
+| Argument | Required | Description |
+|----------|----------|-------------|
+| `<title>` | Yes | The new title for the workspace (multiple words allowed) |
+
+## Output Format
+
+### Text Output (default)
+
+Returns a success message:
+
+```
+OK workspace:2
+```
+
+### JSON Output
+
+Returns workspace information:
+
+```json
+{
+  "workspace_ref": "workspace:2",
+  "workspace_id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+}
+```
+
+## Title Formatting
+
+- Multiple words are automatically joined with spaces
+- Leading and trailing whitespace is trimmed
+- Empty titles are not allowed
+- Titles can contain any characters including spaces, dashes, and emojis
+
+## Environment Variables
+
+| Variable | Description | Fallback Behavior |
+|----------|-------------|-------------------|
+| `CMUX_WORKSPACE_ID` | Used when `--workspace` is not specified | Command fails if neither is set |
+
+The environment variable is automatically set when running commands from within a cmux workspace shell.
+
+## Examples
+
+### Rename current workspace
+
+When run from within a workspace shell:
+
+```bash
+cmux rename-workspace "Frontend Dev"
+```
+
+### Rename a specific workspace
+
+```bash
+cmux rename-workspace --workspace workspace:2 "API Server"
+```
+
+### Rename using UUID
+
+```bash
+cmux rename-workspace --workspace 6ba7b810-9dad-11d1-80b4-00c04fd430c8 "Database"
+```
+
+### Title with special characters
+
+```bash
+cmux rename-workspace --workspace workspace:1 "Build & Deploy"
+```
+
+### Using the separator for titles starting with dash
+
+```bash
+cmux rename-workspace --workspace workspace:3 -- "--production logs"
+```
+
+### With JSON output
+
+```bash
+cmux rename-workspace --workspace workspace:1 "Test Suite" --json
+```
+
+### Rename workspace in different window
+
+```bash
+cmux --window window:2 rename-workspace --workspace workspace:1 "Remote Session"
+```
+
+### Auto-name based on directory
+
+```bash
+#!/bin/bash
+# Rename current workspace to current directory name
+DIR_NAME=$(basename "$PWD")
+cmux rename-workspace "$DIR_NAME"
+```
+
+### Project-aware naming
+
+```bash
+#!/bin/bash
+# Set workspace title based on git repository
+if git rev-parse --git-dir > /dev/null 2>&1; then
+  BRANCH=$(git branch --show-current)
+  REPO=$(basename $(git rev-parse --show-toplevel))
+  cmux rename-workspace "$REPO ($BRANCH)"
+else
+  echo "Not in a git repository"
+fi
+```
+
+### Rename all workspaces systematically
+
+```bash
+#!/bin/bash
+# Rename workspaces based on a naming scheme
+PREFIXES=("Development" "Testing" "Staging" "Production")
+
+for i in "${!PREFIXES[@]}"; do
+  WS_NUM=$((i + 1))
+  cmux rename-workspace --workspace "workspace:$WS_NUM" "${PREFIXES[$i]}"
+done
+```
+
+### Clear a workspace title
+
+```bash
+# Set to a single space (minimal title)
+cmux rename-workspace --workspace workspace:2 " "
+```
+
+### Dynamic title updates
+
+```bash
+#!/bin/bash
+# Update workspace title with current task
+update_workspace_title() {
+  local task="$1"
+  cmux rename-workspace "[ACTIVE] $task"
+}
+
+# Use in your workflow
+update_workspace_title "Building frontend"
+npm run build
+
+update_workspace_title "Running tests"
+npm test
+
+update_workspace_title "Idle"
+```
+
+## Use Cases
+
+### Organize by environment
+
+```bash
+cmux rename-workspace --workspace workspace:1 "Local Dev"
+cmux rename-workspace --workspace workspace:2 "Staging"
+cmux rename-workspace --workspace workspace:3 "Production Logs"
+```
+
+### Organize by service
+
+```bash
+cmux rename-workspace --workspace workspace:1 "Frontend"
+cmux rename-workspace --workspace workspace:2 "Backend API"
+cmux rename-workspace --workspace workspace:3 "Database"
+```
+
+### Task-based organization
+
+```bash
+cmux rename-workspace "Feature: User Auth"
+cmux rename-workspace "Bugfix: Memory Leak"
+cmux rename-workspace "Research: New Library"
+```
+
+## Behavior
+
+- Title changes are immediate and reflected in the UI
+- Renaming doesn't affect workspace focus or selection
+- Titles are persistent across cmux sessions
+- Short refs (e.g., `workspace:2`) remain stable regardless of title
+
+## Error Handling
+
+The command will fail if:
+- The title is empty after trimming whitespace
+- The specified workspace doesn't exist
+- Neither `--workspace` nor `$CMUX_WORKSPACE_ID` is available
+
+```bash
+$ cmux rename-workspace ""
+ERROR: rename-workspace requires a title
+```
+
+## Related Commands
+
+- [list-workspaces](/cli/workspaces/list) - View workspace titles
+- [new-workspace](/cli/workspaces/create) - Create a new workspace
+- [select-workspace](/cli/workspaces/select) - Switch to a workspace
+- [close-workspace](/cli/workspaces/close) - Close a workspace

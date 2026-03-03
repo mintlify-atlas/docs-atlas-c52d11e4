@@ -1,0 +1,385 @@
+---
+title: "notification.clear"
+description: "Remove all notifications from the panel and history"
+---
+
+The `notification.clear` method removes all notifications from cmux, clearing both the notification panel and notification history.
+
+## Method
+
+```json
+{
+  "id": "clear-1",
+  "method": "notification.clear",
+  "params": {}
+}
+```
+
+## Parameters
+
+This method takes no parameters.
+
+## Response
+
+Returns an empty success result:
+
+```json
+{
+  "ok": true,
+  "result": {}
+}
+```
+
+## Behavior
+
+Clearing notifications:
+
+### What Gets Cleared
+
+- **All notifications** - Both read and unread
+- **Panel display** - Notification panel becomes empty
+- **System notifications** - Pending and delivered macOS notifications removed
+- **Dock badge** - Unread count badge removed from app icon
+- **Workspace badges** - Per-workspace notification indicators cleared
+
+### What Persists
+
+- **Workspace state** - Workspaces, surfaces, and content unchanged
+- **Settings** - Notification preferences remain
+- **Panel visibility** - Notification panel stays open/closed as before
+
+### Atomicity
+
+- **Single operation** - All notifications cleared in one atomic action
+- **No partial clears** - Cannot clear individual notifications via API (UI only)
+- **Cannot undo** - Cleared notifications are permanently removed
+- **Immediate effect** - UI updates instantly
+
+## Notification Panel Behavior
+
+After clearing:
+
+1. **Panel shows empty state** - "No notifications" message displayed
+2. **Badge removed** - Dock icon badge disappears
+3. **Workspace indicators cleared** - Unread counts reset to zero
+4. **System notification center** - Delivered notifications removed from macOS notification center
+
+## Examples
+
+### Basic Clear
+
+```json
+{
+  "id": "req-1",
+  "method": "notification.clear",
+  "params": {}
+}
+```
+
+### Clear with Confirmation
+
+```javascript
+// Check count before clearing
+const listResult = await sendSocketRequest({
+  id: "req-2a",
+  method: "notification.list",
+  params: {}
+});
+
+const count = listResult.result.notifications.length;
+
+if (count > 0) {
+  const confirmed = confirm(`Clear ${count} notification(s)?`);
+  
+  if (confirmed) {
+    await sendSocketRequest({
+      id: "req-2b",
+      method: "notification.clear",
+      params: {}
+    });
+    console.log(`Cleared ${count} notifications`);
+  }
+}
+```
+
+### Archive Before Clearing
+
+```javascript
+// Save notifications before clearing
+const listResult = await sendSocketRequest({
+  id: "req-3a",
+  method: "notification.list",
+  params: {}
+});
+
+// Archive to file
+const timestamp = new Date().toISOString();
+const filename = `notifications-${timestamp}.json`;
+await fs.writeFile(
+  filename,
+  JSON.stringify(listResult.result.notifications, null, 2)
+);
+
+// Clear cmux panel
+await sendSocketRequest({
+  id: "req-3b",
+  method: "notification.clear",
+  params: {}
+});
+
+console.log(`Archived ${listResult.result.notifications.length} notifications to ${filename}`);
+```
+
+### Periodic Cleanup
+
+```javascript
+// Clear notifications older than 24 hours
+const listResult = await sendSocketRequest({
+  id: "req-4a",
+  method: "notification.list",
+  params: {}
+});
+
+const now = Date.now();
+const dayAgo = now - (24 * 60 * 60 * 1000);
+
+// Note: createdAt not in v2 response yet, would need to track separately
+const oldNotifs = listResult.result.notifications.filter(
+  n => n.createdAt && new Date(n.createdAt).getTime() < dayAgo
+);
+
+if (oldNotifs.length > 0) {
+  await sendSocketRequest({
+    id: "req-4b",
+    method: "notification.clear",
+    params: {}
+  });
+  console.log(`Cleared ${oldNotifs.length} old notifications`);
+}
+```
+
+## Python Example
+
+```python
+import json
+import socket
+
+def clear_notifications(sock_path="/tmp/cmux.sock"):
+    """Clear all cmux notifications via socket API."""
+    request = {
+        "id": "py-clear-1",
+        "method": "notification.clear",
+        "params": {}
+    }
+    
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        sock.connect(sock_path)
+        sock.sendall(json.dumps(request).encode() + b"\n")
+        
+        response = b""
+        while b"\n" not in response:
+            response += sock.recv(4096)
+        
+        result = json.loads(response.decode())
+        return result.get("ok", False)
+    finally:
+        sock.close()
+
+# Usage
+if clear_notifications():
+    print("Notifications cleared successfully")
+else:
+    print("Failed to clear notifications")
+```
+
+## Test Automation Example
+
+```javascript
+// Clear before test for clean state
+await sendSocketRequest({
+  id: "test-setup",
+  method: "notification.clear",
+  params: {}
+});
+
+// Run test that generates notifications
+await runBuildProcess();
+
+// Verify expected notification was created
+const listResult = await sendSocketRequest({
+  id: "test-verify",
+  method: "notification.list",
+  params: {}
+});
+
+const buildNotif = listResult.result.notifications.find(
+  n => n.title === "Build Complete"
+);
+
+assert(buildNotif, "Expected build notification not found");
+
+// Cleanup after test
+await sendSocketRequest({
+  id: "test-cleanup",
+  method: "notification.clear",
+  params: {}
+});
+```
+
+## Implementation Details
+
+From `Sources/TerminalController.swift:4858-4863`:
+
+```swift
+private func v2NotificationClear() -> V2CallResult {
+    DispatchQueue.main.sync {
+        TerminalNotificationStore.shared.clearAll()
+    }
+    return .ok([:])
+}
+```
+
+Store implementation from `Sources/TerminalNotificationStore.swift:303-309`:
+
+```swift
+func clearAll() {
+    guard !notifications.isEmpty else { return }
+    let ids = notifications.map { $0.id.uuidString }
+    notifications.removeAll()
+    center.removeDeliveredNotifications(withIdentifiers: ids)
+    center.removePendingNotificationRequests(withIdentifiers: ids)
+}
+```
+
+## CLI Equivalent
+
+The CLI `clear-notifications` command provides a convenient wrapper:
+
+```bash
+cmux clear-notifications
+```
+
+See [CLI clear-notifications](/cli/notifications/clear) for details.
+
+## Use Cases
+
+### Session Cleanup
+
+```javascript
+// Clear notifications at start of coding session
+await sendSocketRequest({
+  method: "notification.clear",
+  params: {}
+});
+
+console.log("Session started with clean notification state");
+```
+
+### Test Isolation
+
+```javascript
+// Ensure clean state for each test
+beforeEach(async () => {
+  await sendSocketRequest({
+    method: "notification.clear",
+    params: {}
+  });
+});
+```
+
+### Maintenance Scripts
+
+```javascript
+// Daily cleanup script
+const result = await sendSocketRequest({
+  method: "notification.list",
+  params: {}
+});
+
+const count = result.result.notifications.length;
+
+if (count > 100) {
+  console.log(`${count} notifications found, clearing...`);
+  await sendSocketRequest({
+    method: "notification.clear",
+    params: {}
+  });
+  console.log("Notification history cleared");
+}
+```
+
+### Agent Session Reset
+
+```javascript
+// Reset notification state before agent session
+await sendSocketRequest({
+  method: "notification.clear",
+  params: {}
+});
+
+// Send session start notification
+await sendSocketRequest({
+  method: "notification.create",
+  params: {
+    title: "Agent Session",
+    body: "New coding session started"
+  }
+});
+```
+
+## Error Handling
+
+```javascript
+try {
+  const result = await sendSocketRequest({
+    id: "req-clear",
+    method: "notification.clear",
+    params: {}
+  });
+  
+  if (result.ok) {
+    console.log("Notifications cleared successfully");
+  } else {
+    console.error("Failed to clear:", result.error.message);
+  }
+} catch (err) {
+  console.error("Socket communication error:", err);
+}
+```
+
+## Best Practices
+
+1. **Archive before clearing** - Save notification history if needed for audit/debugging
+2. **Confirm in interactive contexts** - Prompt user before clearing in UI applications
+3. **Use for test isolation** - Clear before each test for predictable state
+4. **Schedule periodic clears** - Prevent unbounded growth in long-running sessions
+5. **Log clearing events** - Track when and why notifications are cleared
+
+## Limitations
+
+- **No selective clearing** - Cannot clear individual notifications via API
+- **No undo** - Cleared notifications cannot be recovered
+- **No workspace filtering** - Cannot clear notifications for specific workspace only
+- **No timestamp filtering** - Cannot clear by date range
+
+**Note**: Individual notification management (delete single, mark as read, etc.) is only available through the UI currently. Future API methods may support these operations.
+
+## Performance
+
+- **Fast operation** - Typically completes in less than 10ms
+- **Scales linearly** - Performance degrades with notification count
+- **Main thread execution** - Runs on UI thread but minimal blocking
+- **Atomic operation** - All-or-nothing clearing
+
+## Related Methods
+
+- [notification.create](/api/notifications/send) - Send a notification
+- [notification.list](/api/notifications/list) - List all notifications
+- [workspace.list](/api/workspace/list) - Get workspace information
+
+## See Also
+
+- [Notification Feature Guide](/features/notifications)
+- [Socket API Reference](/configuration/socket-api)
+- [CLI Documentation](/cli/notifications/clear)

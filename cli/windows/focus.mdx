@@ -1,0 +1,82 @@
+---
+title: focus-window
+description: Focus (bring to front) a specific window
+---
+
+Focuses and brings the specified window to the front.
+
+## Usage
+
+```bash
+cmux focus-window --window <id|ref|index>
+```
+
+## Flags
+
+<ParamField path="--window" type="string" required>
+  Window to focus. Can be specified as:
+  - Window ID (UUID)
+  - Window reference (e.g., `window:1`)
+  - Index number (e.g., `0`, `1`)
+</ParamField>
+
+## Output
+
+The command returns a success message:
+
+```
+OK
+```
+
+## Examples
+
+### Focus window by index
+
+```bash
+cmux focus-window --window 0
+```
+
+Focuses the first window (index 0).
+
+### Focus window by reference
+
+```bash
+cmux focus-window --window window:1
+```
+
+Focuses the window with reference `window:1`.
+
+### Focus window by UUID
+
+```bash
+cmux focus-window --window 550e8400-e29b-41d4-a716-446655440000
+```
+
+Focuses the window with the specified UUID.
+
+### Focus the second window from a script
+
+```bash
+#!/bin/bash
+# Get the second window's ID
+WINDOW_ID=$(cmux list-windows --json | jq -r '.[1].id')
+
+# Focus it
+cmux focus-window --window "$WINDOW_ID"
+```
+
+## Window Identifiers
+
+Windows can be identified in three ways:
+
+1. **Index**: Zero-based position in the window list (e.g., `0`, `1`, `2`)
+2. **Reference**: A symbolic reference like `window:1`
+3. **UUID**: The unique identifier for the window
+
+You can get window identifiers using the [list-windows](/cli/windows/list) command.
+
+## Related Commands
+
+- [list-windows](/cli/windows/list) - List all open windows
+- [new-window](/cli/windows/create) - Create a new window
+- [close-window](/cli/windows/close) - Close a window

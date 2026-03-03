@@ -1,0 +1,145 @@
+---
+title: workspace.rename
+description: Set a custom title for a workspace
+---
+
+## Overview
+
+Sets a custom title for the specified workspace. The title is persisted and displayed in the workspace tab bar.
+
+## Method
+
+```
+workspace.rename
+```
+
+## Parameters
+
+<ParamField path="workspace_id" type="string" required>
+  Workspace identifier (UUID or ref)
+</ParamField>
+
+<ParamField path="title" type="string" required>
+  New title for the workspace. Whitespace is trimmed. Cannot be empty.
+</ParamField>
+
+<ParamField path="window_id" type="string" optional>
+  Window identifier (UUID or ref). If omitted, the workspace's window is determined automatically.
+</ParamField>
+
+## Response
+
+<ResponseField name="window_id" type="string">
+  UUID of the window containing the workspace
+</ResponseField>
+
+<ResponseField name="window_ref" type="string">
+  Short reference for the window
+</ResponseField>
+
+<ResponseField name="workspace_id" type="string">
+  UUID of the renamed workspace
+</ResponseField>
+
+<ResponseField name="workspace_ref" type="string">
+  Short reference for the workspace
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  The new title (after trimming whitespace)
+</ResponseField>
+
+## Error Codes
+
+<ResponseField name="unavailable" type="error">
+  TabManager not available
+</ResponseField>
+
+<ResponseField name="invalid_params" type="error">
+  - Missing `workspace_id`
+  - Missing `title`
+  - Empty `title` (after trimming whitespace)
+</ResponseField>
+
+<ResponseField name="not_found" type="error">
+  Workspace not found
+</ResponseField>
+
+## Title Behavior
+
+- Custom titles override auto-generated titles (based on working directory)
+- Titles are persisted across app restarts
+- To clear a custom title, use `workspace.action` with `action: "clear_name"`
+
+## Example
+
+### Rename workspace
+
+```bash
+cmux rename-workspace --workspace ws1 "Production Server"
+```
+
+### Using double dash separator
+
+```bash
+cmux rename-workspace --workspace ws2 -- Database - Staging
+```
+
+## CLI Implementation
+
+Source: `CLI/cmux.swift:1145`
+
+```swift
+case "rename-workspace", "rename-window":
+    let (wsArg, rem0) = parseOption(commandArgs, name: "--workspace")
+    let workspaceArg = wsArg ?? ProcessInfo.processInfo.environment["CMUX_WORKSPACE_ID"]
+    let titleArgs = rem0.dropFirst(rem0.first == "--" ? 1 : 0)
+    let title = titleArgs.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+```
+
+The CLI:
+1. Resolves the workspace ID (from `--workspace` or `CMUX_WORKSPACE_ID`)
+2. Joins remaining arguments as the title
+3. Trims whitespace
+4. Calls `workspace.rename`
+
+## Socket API
+
+```json
+{
+  "id": "req-1",
+  "method": "workspace.rename",
+  "params": {
+    "workspace_id": "650e8400-e29b-41d4-a716-446655440001",
+    "title": "Production Server"
+  }
+}
+```
+
+### Response
+
+```json
+{
+  "ok": true,
+  "result": {
+    "window_id": "550e8400-e29b-41d4-a716-446655440000",
+    "window_ref": "w1",
+    "workspace_id": "650e8400-e29b-41d4-a716-446655440001",
+    "workspace_ref": "ws1",
+    "title": "Production Server"
+  }
+}
+```
+
+## Related Methods
+
+- `workspace.action` with `action: "clear_name"` - Remove custom title
+- `workspace.action` with `action: "rename"` - Alternative rename interface
+
+## Implementation
+
+Source: `Sources/TerminalController.swift:2569`
+
+- Updates via `TabManager.setCustomTitle(tabId:title:)`
+- Thread-safe via `v2MainSync`
+- Title persistence handled by TabManager

@@ -1,0 +1,245 @@
+---
+title: window.close
+description: Close an application window
+---
+
+## Overview
+
+Closes the specified window and all workspaces within it.
+
+<Warning>
+  This will close all workspaces and surfaces in the window. Any unsaved work in terminal sessions may be lost.
+</Warning>
+
+## Request Format
+
+### JSON-RPC
+
+```json
+{
+  "id": "<request-id>",
+  "method": "window.close",
+  "params": {
+    "window_id": "<window-uuid>"
+  }
+}
+```
+
+## Parameters
+
+<ParamField name="window_id" type="string" required>
+  UUID of the window to close. Can be obtained from [window.list](/api/window/list) or [window.create](/api/window/create).
+</ParamField>
+
+## Response
+
+### Success Response
+
+<ResponseField name="ok" type="boolean" required>
+  Always `true` for successful responses
+</ResponseField>
+
+<ResponseField name="result" type="object" required>
+  <Expandable title="properties">
+    <ResponseField name="window_id" type="string" required>
+      UUID of the closed window
+    </ResponseField>
+    <ResponseField name="window_ref" type="string" required>
+      Human-readable reference in format `window:N`
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Success Response
+
+```json
+{
+  "ok": true,
+  "result": {
+    "window_id": "B2C3D4E5-F678-90AB-CDEF-123456789012",
+    "window_ref": "window:1"
+  }
+}
+```
+
+### Error Response
+
+<ResponseField name="ok" type="boolean" required>
+  Always `false` for error responses
+</ResponseField>
+
+<ResponseField name="error" type="object" required>
+  <Expandable title="properties">
+    <ResponseField name="code" type="string" required>
+      Error code identifying the failure reason
+    </ResponseField>
+    <ResponseField name="message" type="string" required>
+      Human-readable error description
+    </ResponseField>
+    <ResponseField name="data" type="object | null">
+      Additional error context including the requested window_id
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Error Response
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "not_found",
+    "message": "Window not found",
+    "data": {
+      "window_id": "INVALID-UUID",
+      "window_ref": null
+    }
+  }
+}
+```
+
+## Error Codes
+
+<ParamField name="invalid_params" type="error">
+  Missing or invalid `window_id` parameter
+</ParamField>
+
+<ParamField name="not_found" type="error">
+  The specified window does not exist or has already been closed
+</ParamField>
+
+## Usage Examples
+
+### CLI
+
+```bash
+# Close a window by ID
+cmux close-window --window B2C3D4E5-F678-90AB-CDEF-123456789012
+
+# Close a window by reference
+cmux close-window --window window:1
+
+# Close the second window from the list
+WINDOW_ID=$(cmux list-windows --json | jq -r '.windows[1].id')
+cmux close-window --window $WINDOW_ID
+```
+
+### Python
+
+```python
+import json
+import socket
+
+def close_window(window_id: str, socket_path="/tmp/cmux.sock"):
+    request = {
+        "id": "req-1",
+        "method": "window.close",
+        "params": {
+            "window_id": window_id
+        }
+    }
+    
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+        sock.connect(socket_path)
+        sock.sendall((json.dumps(request) + "\n").encode())
+        response = json.loads(sock.recv(8192).decode().strip())
+        
+    if response["ok"]:
+        print(f"Closed window {response['result']['window_ref']}")
+        return True
+    else:
+        error = response["error"]
+        print(f"Error: {error['code']}: {error['message']}")
+        return False
+
+# Close a specific window
+close_window("B2C3D4E5-F678-90AB-CDEF-123456789012")
+```
+
+### Swift
+
+```swift
+let windowId = "B2C3D4E5-F678-90AB-CDEF-123456789012"
+let params: [String: Any] = ["window_id": windowId]
+
+do {
+    let response = try client.sendV2(method: "window.close", params: params)
+    if let windowRef = response["window_ref"] as? String {
+        print("Closed window \(windowRef)")
+    }
+} catch let error as CLIError {
+    if error.message.contains("not_found") {
+        print("Window does not exist")
+    } else {
+        print("Failed to close window: \(error)")
+    }
+}
+```
+
+### JavaScript (Node.js)
+
+```javascript
+const net = require('net');
+
+function closeWindow(windowId, socketPath = '/tmp/cmux.sock') {
+  return new Promise((resolve, reject) => {
+    const client = net.createConnection(socketPath);
+    
+    const request = {
+      id: 'req-1',
+      method: 'window.close',
+      params: { window_id: windowId }
+    };
+    
+    client.on('connect', () => {
+      client.write(JSON.stringify(request) + '\n');
+    });
+    
+    client.on('data', (data) => {
+      const response = JSON.parse(data.toString().trim());
+      client.end();
+      
+      if (response.ok) {
+        resolve(response.result);
+      } else {
+        reject(new Error(`${response.error.code}: ${response.error.message}`));
+      }
+    });
+    
+    client.on('error', reject);
+  });
+}
+
+closeWindow('B2C3D4E5-F678-90AB-CDEF-123456789012')
+  .then(result => console.log(`Closed ${result.window_ref}`))
+  .catch(err => console.error(err.message));
+```
+
+### Bash Script - Close Empty Windows
+
+```bash
+#!/bin/bash
+# Close all windows with no workspaces
+
+WINDOWS=$(cmux list-windows --json)
+
+echo "$WINDOWS" | jq -r '.windows[] | select(.workspace_count == 0) | .id' | while read WINDOW_ID; do
+  echo "Closing empty window: $WINDOW_ID"
+  cmux close-window --window "$WINDOW_ID"
+done
+```
+
+## Behavior Notes
+
+- Closing a window will terminate all terminal sessions and surfaces within it
+- If this is the last window and the application is configured to quit when the last window closes, the application will exit
+- Window close does **not steal focus** from other applications; it simply removes the window
+- After closing a window, its `window_id` becomes invalid and cannot be reused
+- Workspaces cannot be recovered after the window is closed; use [workspace.move](/api/workspace/move) to preserve workspaces before closing
+
+## Related Methods
+
+- [window.list](/api/window/list) - Get available window IDs
+- [window.create](/api/window/create) - Create a new window
+- [workspace.move](/api/workspace/move) - Move workspaces before closing
+- [workspace.close](/api/workspace/close) - Close individual workspaces

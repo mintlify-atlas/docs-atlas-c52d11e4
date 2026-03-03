@@ -1,0 +1,125 @@
+---
+title: move-surface
+description: Move a surface to a different pane
+---
+
+The `move-surface` command moves a surface to a different pane, workspace, or window while **preserving the surface_id**.
+
+## Terminology
+
+In cmux, **surface** and **panel** are synonymous terms. A surface represents a single UI element (terminal, browser, etc.) that can be moved between panes.
+
+## Usage
+
+```bash
+cmux move-surface <surface> [--pane <id|ref>] [--workspace <id|ref>] [--window <id|ref>] 
+                   [--before <surface>] [--after <surface>] [--index <n>] [--focus true|false]
+```
+
+## Options
+
+### Target surface
+
+- `--surface <id|ref|index>` - Surface to move (or first positional argument)
+
+### Destination
+
+- `--pane <id|ref>` - Target pane
+- `--workspace <id|ref>` - Target workspace
+- `--window <id|ref>` - Target window
+
+### Positioning
+
+- `--before <surface>` or `--before-surface <surface>` - Insert before this surface
+- `--after <surface>` or `--after-surface <surface>` - Insert after this surface
+- `--index <n>` - Insert at specific index (0-based)
+
+### Behavior
+
+- `--focus <true|false>` - Whether to focus the surface after moving (default: `true`)
+
+## Targeting
+
+### Surface targeting
+
+Surfaces can be targeted by:
+- **UUID** - Full surface ID
+- **Ref** - Short reference (e.g., `surface:0`, `surface:1`)
+- **Index** - Numeric index within the workspace
+
+### Pane/Workspace/Window targeting
+
+All destination targets can be specified by UUID, ref, or index.
+
+## Move Semantics
+
+The `move-surface` command **preserves the `surface_id`** when moving between panes, workspaces, or windows. This is different from creating a new surface.
+
+- The surface retains its identity (same UUID)
+- Terminal state, history, and processes are preserved
+- Browser state and navigation history are preserved
+
+## Output
+
+### Human-readable format
+
+```
+OK surface=surface:2 pane=pane:1 workspace=workspace:0 window=window:0
+```
+
+### JSON format
+
+```json
+{
+  "surface_ref": "surface:2",
+  "pane_ref": "pane:1",
+  "workspace_ref": "workspace:0",
+  "window_ref": "window:0"
+}
+```
+
+## Examples
+
+```bash
+# Move surface to a different pane
+cmux move-surface surface:0 --pane pane:1
+
+# Move surface to a different workspace
+cmux move-surface surface:2 --workspace workspace:1
+
+# Move surface to a different window
+cmux move-surface surface:0 --window window:1
+
+# Move surface before another surface in the same pane
+cmux move-surface surface:3 --before surface:1
+
+# Move surface to specific index in destination pane
+cmux move-surface surface:2 --pane pane:1 --index 0
+
+# Move surface without focusing it
+cmux move-surface surface:1 --pane pane:2 --focus false
+
+# Move surface to a different workspace and position after a specific surface
+cmux move-surface surface:0 --workspace workspace:2 --after surface:4
+```
+
+## Positioning Logic
+
+When moving a surface, you can control its position in the destination pane:
+
+1. **Before/After**: Use `--before` or `--after` to insert relative to another surface
+2. **Index**: Use `--index` to insert at a specific position (0-based)
+3. **Default**: If no position is specified, the surface is appended to the end of the pane's surface list
+
+## Notes
+
+- If `--pane` is not specified, the surface moves within its current pane (useful for repositioning with `--before`, `--after`, or `--index`)
+- If moving to a different workspace without specifying a pane, the surface is placed in the focused pane of that workspace
+- The surface retains its `surface_id` across moves (unlike creating a new surface)
+
+## Related Commands
+
+- [reorder-surface](/cli/surfaces/reorder) - Reorder surface within the same pane
+- [new-surface](/cli/surfaces/create) - Create a new surface
+- [list-panels](/cli/surfaces/list) - List surfaces
+- [close-surface](/cli/surfaces/close) - Close a surface

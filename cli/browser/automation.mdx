@@ -1,0 +1,579 @@
+---
+title: Automation Commands
+description: Evaluate JavaScript, wait for conditions, and find elements programmatically
+---
+
+## Overview
+
+Automation commands enable advanced browser control: executing JavaScript, waiting for dynamic content, and finding elements using semantic locators.
+
+## Eval
+
+Execute JavaScript in the page context:
+
+```bash
+cmux browser surface:1 eval "document.title"
+cmux browser surface:1 eval "window.location.href"
+```
+
+**Multi-line scripts:**
+
+```bash
+cmux browser surface:1 eval "
+  const items = document.querySelectorAll('.item');
+  return items.length;
+"
+```
+
+**With explicit script flag:**
+
+```bash
+cmux browser surface:1 eval --script "document.querySelector('h1').textContent"
+```
+
+**Response:**
+
+```json
+{
+  "ok": true,
+  "value": "Example Domain"
+}
+```
+
+**Plain text output:**
+
+```
+Example Domain
+```
+
+### Return Values
+
+Eval supports JavaScript types:
+
+```bash
+# String
+cmux browser surface:1 eval "'hello'"
+# hello
+
+# Number
+cmux browser surface:1 eval "42"
+# 42
+
+# Boolean
+cmux browser surface:1 eval "true"
+# true
+
+# Null
+cmux browser surface:1 eval "null"
+# null
+
+# Undefined
+cmux browser surface:1 eval "undefined"
+# undefined
+
+# Object
+cmux browser surface:1 eval "{name: 'test', count: 5}"
+# {"name": "test", "count": 5}
+
+# Array
+cmux browser surface:1 eval "[1, 2, 3]"
+# [1, 2, 3]
+```
+
+### Common Patterns
+
+```bash
+# Get element count
+cmux browser surface:1 eval "document.querySelectorAll('.item').length"
+
+# Get form data
+cmux browser surface:1 eval "document.querySelector('#myform').dataset.userId"
+
+# Check element state
+cmux browser surface:1 eval "document.querySelector('#submit').disabled"
+
+# Manipulate page
+cmux browser surface:1 eval "document.querySelector('.modal').style.display = 'none'"
+```
+
+## Wait
+
+Wait for page conditions before proceeding:
+
+### Wait for Selector
+
+```bash
+# Wait for element to appear (default 30s)
+cmux browser surface:1 wait "#dynamic-content"
+
+# With explicit selector flag
+cmux browser surface:1 wait --selector ".loaded-indicator"
+```
+
+**Response:**
+
+```json
+{
+  "ok": true
+}
+```
+
+### Wait for Text
+
+```bash
+# Wait for text to appear in page
+cmux browser surface:1 wait --text "Loading complete"
+
+# Wait for text in specific element
+cmux browser surface:1 wait --selector "#status" --text "Ready"
+```
+
+### Wait for URL
+
+```bash
+# Wait for URL to contain string
+cmux browser surface:1 wait --url-contains "/dashboard"
+
+# Alternative flag name
+cmux browser surface:1 wait --url "/success"
+```
+
+### Wait for Load State
+
+```bash
+# Wait for document ready
+cmux browser surface:1 wait --load-state "ready"
+
+# Wait for full load (including resources)
+cmux browser surface:1 wait --load-state "complete"
+```
+
+### Wait for Function
+
+```bash
+# Wait for JavaScript condition
+cmux browser surface:1 wait --function "document.querySelector('.spinner') === null"
+
+# Wait for complex condition
+cmux browser surface:1 wait --function "
+  const items = document.querySelectorAll('.item');
+  return items.length > 5;
+"
+```
+
+### Custom Timeout
+
+```bash
+# Timeout in milliseconds
+cmux browser surface:1 wait "#slow-element" --timeout-ms 60000
+
+# Timeout in seconds
+cmux browser surface:1 wait "#element" --timeout 10
+```
+
+**Default timeout:** 30 seconds
+
+### Error on Timeout
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "timeout",
+    "message": "Wait timed out after 30000ms",
+    "selector": "#never-appears"
+  }
+}
+```
+
+## Find
+
+Find elements using semantic locators (ARIA roles, labels, text content):
+
+### Find by Role
+
+```bash
+# Find by ARIA role
+cmux browser surface:1 find role button
+cmux browser surface:1 find role link
+cmux browser surface:1 find role textbox
+```
+
+**With accessible name:**
+
+```bash
+cmux browser surface:1 find role button --name "Submit"
+cmux browser surface:1 find role link --name "Learn more"
+```
+
+**Exact match:**
+
+```bash
+cmux browser surface:1 find role button --name "Sign In" --exact
+```
+
+**Response:**
+
+```json
+{
+  "ok": true,
+  "selector": "button#submit",
+  "ref": "@e5"
+}
+```
+
+**Common roles:**
+- `button`, `link`, `textbox`, `heading`
+- `checkbox`, `radio`, `combobox`, `listbox`
+- `navigation`, `main`, `complementary`, `banner`
+- `alert`, `dialog`, `menu`, `menuitem`
+
+### Find by Text
+
+```bash
+# Find element containing text
+cmux browser surface:1 find text "Welcome"
+cmux browser surface:1 find text "Click here"
+```
+
+**Exact match:**
+
+```bash
+cmux browser surface:1 find text "Exact Text" --exact
+```
+
+### Find by Label
+
+```bash
+# Find form field by label
+cmux browser surface:1 find label "Email address"
+cmux browser surface:1 find label "Password"
+```
+
+**Use case:**
+
+```bash
+cmux browser surface:1 find label "Username"
+cmux browser surface:1 fill "@e3" "admin"
+```
+
+### Find by Placeholder
+
+```bash
+# Find input by placeholder text
+cmux browser surface:1 find placeholder "Search..."
+cmux browser surface:1 find placeholder "Enter your email"
+```
+
+### Find by Alt Text
+
+```bash
+# Find image by alt text
+cmux browser surface:1 find alt "Company Logo"
+cmux browser surface:1 find alt "Product Image"
+```
+
+### Find by Title
+
+```bash
+# Find element by title attribute
+cmux browser surface:1 find title "Click to expand"
+cmux browser surface:1 find title "More information"
+```
+
+### Find by Test ID
+
+```bash
+# Find by data-testid attribute
+cmux browser surface:1 find testid "login-button"
+cmux browser surface:1 find testid "user-menu"
+```
+
+### Find First / Last
+
+```bash
+# Find first matching element
+cmux browser surface:1 find first ".item"
+
+# Find last matching element
+cmux browser surface:1 find last "li"
+```
+
+### Find Nth
+
+```bash
+# Find nth element (0-indexed)
+cmux browser surface:1 find nth 0 ".item"  # First
+cmux browser surface:1 find nth 2 ".item"  # Third
+
+# With flags
+cmux browser surface:1 find nth --index 1 --selector ".card"
+```
+
+## Get Commands
+
+Retrieve element properties and page information:
+
+### Get Text
+
+```bash
+cmux browser surface:1 get text "h1"
+cmux browser surface:1 get text ".description"
+```
+
+**Response:**
+
+```
+Example Domain
+```
+
+### Get HTML
+
+```bash
+cmux browser surface:1 get html ".content"
+cmux browser surface:1 get html "#article"
+```
+
+**Response:**
+
+```html
+<div class="content">
+  <h1>Title</h1>
+  <p>Content...</p>
+</div>
+```
+
+### Get Value
+
+```bash
+cmux browser surface:1 get value "#username"
+cmux browser surface:1 get value "input[type='text']"
+```
+
+**Response:**
+
+```
+user@example.com
+```
+
+### Get Attribute
+
+```bash
+cmux browser surface:1 get attr "a" --attr href
+cmux browser surface:1 get attr "img" --attr src
+cmux browser surface:1 get attr "button" --attr disabled
+```
+
+**Response:**
+
+```
+https://example.com/page
+```
+
+### Get Count
+
+```bash
+cmux browser surface:1 get count ".item"
+cmux browser surface:1 get count "ul > li"
+```
+
+**Response:**
+
+```
+5
+```
+
+### Get Bounding Box
+
+```bash
+cmux browser surface:1 get box "#element"
+```
+
+**Response:**
+
+```json
+{
+  "ok": true,
+  "value": {
+    "x": 100,
+    "y": 200,
+    "width": 300,
+    "height": 50
+  }
+}
+```
+
+### Get Styles
+
+```bash
+# Get all computed styles
+cmux browser surface:1 get styles ".element"
+
+# Get specific property
+cmux browser surface:1 get styles ".button" --property "background-color"
+```
+
+**Response:**
+
+```json
+{
+  "ok": true,
+  "value": {
+    "color": "rgb(0, 0, 0)",
+    "font-size": "16px",
+    "display": "block"
+  }
+}
+```
+
+## Is Commands
+
+Check element state:
+
+### Is Visible
+
+```bash
+cmux browser surface:1 is visible "#element"
+cmux browser surface:1 is visible ".modal"
+```
+
+**Response:**
+
+```
+true
+```
+
+**JSON response:**
+
+```json
+{
+  "ok": true,
+  "value": true
+}
+```
+
+### Is Enabled
+
+```bash
+cmux browser surface:1 is enabled "#submit"
+cmux browser surface:1 is enabled "input[type='submit']"
+```
+
+### Is Checked
+
+```bash
+cmux browser surface:1 is checked "#terms"
+cmux browser surface:1 is checked "input[name='newsletter']"
+```
+
+## Automation Workflows
+
+### Wait and Interact
+
+```bash
+# Wait for element, then click
+cmux browser surface:1 wait "#load-more"
+cmux browser surface:1 click "#load-more"
+
+# Wait for URL change
+cmux browser surface:1 click "#submit"
+cmux browser surface:1 wait --url-contains "/success"
+```
+
+### Conditional Actions
+
+```bash
+# Check state before acting
+VISIBLE=$(cmux browser surface:1 is visible ".modal")
+if [ "$VISIBLE" = "true" ]; then
+  cmux browser surface:1 click ".modal .close"
+fi
+```
+
+### Find and Fill Form
+
+```bash
+# Find fields by label, fill them
+cmux browser surface:1 find label "Email"
+cmux browser surface:1 fill "@e1" "user@example.com"
+
+cmux browser surface:1 find label "Password"
+cmux browser surface:1 fill "@e2" "secret"
+
+cmux browser surface:1 find role button --name "Sign In"
+cmux browser surface:1 click "@e3"
+```
+
+### Dynamic Content
+
+```bash
+# Click to load, wait for content
+cmux browser surface:1 click "#load-more"
+cmux browser surface:1 wait --function "
+  document.querySelectorAll('.item').length > 10
+"
+
+# Get updated count
+cmux browser surface:1 get count ".item"
+```
+
+### Data Extraction
+
+```bash
+# Extract structured data
+cmux browser surface:1 eval "
+  Array.from(document.querySelectorAll('.item')).map(el => ({
+    title: el.querySelector('.title').textContent,
+    price: el.querySelector('.price').textContent,
+    url: el.querySelector('a').href
+  }))
+"
+```
+
+## Error Handling
+
+### Element Not Found (Find)
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "not_found",
+    "message": "No element found with role=button name=\"Missing\"",
+    "role": "button",
+    "name": "Missing"
+  }
+}
+```
+
+### Timeout (Wait)
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "timeout",
+    "message": "Wait condition not met after 30000ms",
+    "selector": "#never-appears"
+  }
+}
+```
+
+### Script Error (Eval)
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "invalid_params",
+    "message": "JavaScript evaluation failed: ReferenceError: foo is not defined",
+    "script": "foo.bar()"
+  }
+}
+```
+
+## See Also
+
+- [Navigation Commands](/cli/browser/navigation) - Navigate and reload pages
+- [Interaction Commands](/cli/browser/interaction) - Click, type, fill
+- [Snapshot Format](/cli/browser/snapshot) - Accessibility tree and refs

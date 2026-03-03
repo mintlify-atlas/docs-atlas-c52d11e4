@@ -1,0 +1,264 @@
+---
+title: Split Panes
+description: Create horizontal and vertical terminal splits with directional focus navigation
+---
+
+Split panes allow you to divide your workspace into multiple terminal views, enabling you to work with multiple terminals side-by-side or stacked vertically.
+
+<Frame>
+  <img src="/images/vertical-horizontal-tabs-and-splits.png" alt="Split panes example" />
+</Frame>
+
+## Creating Splits
+
+Create new panes by splitting the current pane horizontally or vertically:
+
+<CodeGroup>
+```bash Keyboard
+# Split right (vertical split)
+Cmd+D
+
+# Split down (horizontal split)
+Cmd+Shift+D
+```
+
+```bash CLI
+# Split right
+cmux pane.create --direction right --workspace <workspace-id>
+
+# Split down
+cmux pane.create --direction down --workspace <workspace-id>
+```
+</CodeGroup>
+
+<Tip>
+**Remember:** `Cmd+D` splits vertically (creates a new pane to the **right**), while `Cmd+Shift+D` splits horizontally (creates a new pane **below**).
+</Tip>
+
+## Navigating Between Panes
+
+Move focus between split panes directionally using keyboard shortcuts:
+
+| Shortcut | Action |
+|----------|--------|
+| `Option+Cmd+←` | Focus pane to the left |
+| `Option+Cmd+→` | Focus pane to the right |
+| `Option+Cmd+↑` | Focus pane above |
+| `Option+Cmd+↓` | Focus pane below |
+
+```bash CLI
+# Focus specific pane
+cmux pane.focus <pane-id>
+
+# Focus last used pane
+cmux pane.focus --last
+```
+
+<Note>
+Focus navigation is intelligent - it finds the nearest pane in the specified direction, even in complex nested layouts.
+</Note>
+
+## Finding the Focused Pane
+
+When working with multiple splits, you might lose track of which pane has focus. Flash the focused pane to quickly identify it:
+
+```bash
+Cmd+Shift+H
+```
+
+This briefly highlights the focused pane with a visual indicator.
+
+## Complex Layouts
+
+You can create arbitrarily complex layouts by splitting panes multiple times:
+
+<Steps>
+  <Step title="Start with a single pane">
+    Your initial workspace has one pane
+  </Step>
+  <Step title="Split right (Cmd+D)">
+    Creates two side-by-side panes
+  </Step>
+  <Step title="Split down (Cmd+Shift+D)">
+    Splits the current pane vertically
+  </Step>
+  <Step title="Continue splitting">
+    Build your ideal layout with any combination of splits
+  </Step>
+</Steps>
+
+Example 3-pane layout:
+```
+┌─────────┬─────────┐
+│         │         │
+│    A    │    B    │
+│         │         │
+├─────────┴─────────┤
+│                   │
+│         C         │
+│                   │
+└───────────────────┘
+```
+
+## Surfaces Within Panes
+
+Each pane can contain multiple **surfaces** (tabs). This creates a two-level hierarchy:
+
+- **Workspace** (vertical sidebar tabs)
+  - **Pane** (split regions)
+    - **Surface** (horizontal tabs within pane)
+
+Create a new surface in the current pane:
+
+```bash Keyboard
+Cmd+T
+```
+
+Switch between surfaces:
+
+| Shortcut | Action |
+|----------|--------|
+| `Cmd+Shift+]` | Next surface |
+| `Cmd+Shift+[` | Previous surface |
+| `Ctrl+Tab` | Next surface |
+| `Ctrl+Shift+Tab` | Previous surface |
+| `Ctrl+1`–`Ctrl+8` | Jump to surface 1–8 |
+| `Ctrl+9` | Jump to last surface |
+
+## Closing Panes
+
+When you close the last surface in a pane, the pane is automatically removed and the layout adjusts:
+
+```bash Keyboard
+Cmd+W
+```
+
+```bash CLI
+# Close specific surface
+cmux surface.close <surface-id>
+
+# Close all surfaces in pane (closes pane)
+cmux pane.close <pane-id>
+```
+
+<Warning>
+Closing a pane will close all surfaces within it. Make sure to save any unsaved work first.
+</Warning>
+
+## Scriptable Pane Management
+
+Panes are fully scriptable through the CLI and socket API:
+
+```bash
+# List all panes in workspace
+cmux pane.list --workspace <workspace-id>
+
+# List all surfaces in a pane
+cmux pane.surfaces <pane-id>
+
+# Create split with specific command
+cmux pane.create --direction right --command "npm run dev"
+
+# Send text to specific pane
+cmux surface.send-text <surface-id> "echo hello\n"
+```
+
+## Resizing Panes
+
+Resize panes by dragging the divider between them with your mouse. The layout proportions are preserved when you resize the window.
+
+## Mixed Browser and Terminal Panes
+
+You can split browser panes alongside terminal panes:
+
+```bash
+# Open browser in new split
+Cmd+Shift+L
+
+# Or via CLI
+cmux browser open-split http://localhost:3000
+```
+
+This creates a split with:
+- **Terminal pane** - Your code editor, build output, etc.
+- **Browser pane** - Preview your application
+
+<Frame>
+  <img src="/images/built-in-browser.png" alt="Browser split alongside terminal" />
+</Frame>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Splits for Related Work" icon="object-group">
+    Keep related tasks in the same workspace using splits (e.g., editor + test runner + dev server)
+  </Card>
+  <Card title="Use Workspaces for Projects" icon="folders">
+    Separate unrelated projects into different workspaces rather than excessive splits
+  </Card>
+  <Card title="Flash to Find Focus" icon="bolt">
+    Use `Cmd+Shift+H` when you lose track of the focused pane in complex layouts
+  </Card>
+  <Card title="Navigate Directionally" icon="arrows-up-down-left-right">
+    Use `Option+Cmd+arrows` for efficient navigation instead of clicking
+  </Card>
+</CardGroup>
+
+## Common Split Layouts
+
+<AccordionGroup>
+  <Accordion title="Editor + Terminal (2 panes)">
+    ```
+    ┌──────────┬─────────┐
+    │          │         │
+    │  Editor  │ Terminal│
+    │          │         │
+    └──────────┴─────────┘
+    ```
+    
+    1. Start with terminal
+    2. `Cmd+D` to split right
+    3. Open editor in left pane
+  </Accordion>
+
+  <Accordion title="Code + Build + Browser (3 panes)">
+    ```
+    ┌─────────┬─────────┐
+    │         │         │
+    │  Code   │ Browser │
+    │         │         │
+    ├─────────┴─────────┤
+    │   Build Output    │
+    └───────────────────┘
+    ```
+    
+    1. Start with terminal (code)
+    2. `Cmd+D` to split right
+    3. `Cmd+Shift+L` to open browser in right pane
+    4. Focus left pane with `Option+Cmd+←`
+    5. `Cmd+Shift+D` to split down for build output
+  </Accordion>
+
+  <Accordion title="Multi-Service Development (4 panes)">
+    ```
+    ┌──────────┬──────────┐
+    │          │          │
+    │ Frontend │ Backend  │
+    │          │          │
+    ├──────────┼──────────┤
+    │          │          │
+    │   DB     │ Browser  │
+    │          │          │
+    └──────────┴──────────┘
+    ```
+    
+    1. Create 2x2 grid using combination of `Cmd+D` and `Cmd+Shift+D`
+    2. Assign each pane to a service
+  </Accordion>
+</AccordionGroup>
+
+<Card title="Related" icon="link">
+  - [Workspaces](/features/workspaces) - Top-level organization
+  - [Browser](/features/browser) - Split browser alongside terminals
+  - [Vertical Tabs](/features/vertical-tabs) - Sidebar workspace metadata
+</Card>

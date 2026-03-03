@@ -1,0 +1,140 @@
+---
+title: pane.create
+description: Create a new pane with a surface
+---
+
+## Overview
+
+Creates a new pane in the specified workspace, positioned relative to the current pane. A surface is automatically created within the new pane.
+
+## Method
+
+```
+pane.create
+```
+
+## Parameters
+
+<ParamField path="workspace_id" type="string">
+  The ID of the workspace to create the pane in. If omitted, uses the current workspace.
+</ParamField>
+
+<ParamField path="direction" type="string" default="right">
+  The direction to split and create the new pane. Valid options:
+  - `left` - Split to the left of the current pane
+  - `right` - Split to the right of the current pane
+  - `up` - Split above the current pane
+  - `down` - Split below the current pane
+</ParamField>
+
+<ParamField path="type" type="string">
+  The type of surface to create in the new pane. If omitted, creates a terminal surface.
+  - `terminal` - Terminal surface
+  - `browser` - Browser surface
+</ParamField>
+
+<ParamField path="url" type="string">
+  For browser surfaces, the URL to navigate to
+</ParamField>
+
+## Response
+
+<ResponseField name="pane_id" type="string">
+  The unique identifier for the newly created pane
+</ResponseField>
+
+<ResponseField name="pane_ref" type="string">
+  Human-readable reference for the pane (e.g., "p3")
+</ResponseField>
+
+<ResponseField name="surface_id" type="string">
+  The ID of the surface automatically created in the pane
+</ResponseField>
+
+<ResponseField name="surface_ref" type="string">
+  Human-readable reference for the surface
+</ResponseField>
+
+<ResponseField name="workspace_id" type="string">
+  The ID of the workspace containing the pane
+</ResponseField>
+
+<ResponseField name="workspace_ref" type="string">
+  Human-readable reference for the workspace
+</ResponseField>
+
+## CLI Usage
+
+```bash
+# Create pane to the right (default)
+cmux new-pane
+
+# Create pane in specific direction
+cmux new-pane --direction left
+cmux new-pane --direction up
+cmux new-pane --direction down
+
+# Create pane with browser surface
+cmux new-pane --type browser --url https://example.com
+
+# Create in specific workspace
+cmux new-pane --workspace ws2 --direction right
+
+# JSON output
+cmux new-pane --json --direction left
+```
+
+## Direction Options Explained
+
+The `direction` parameter determines where the new pane appears relative to the current pane:
+
+```
+┌─────────┬─────────┐
+│  current│  right  │  --direction right
+│  pane   │  (new)  │
+└─────────┴─────────┘
+
+┌─────────┬─────────┐
+│  left   │ current │  --direction left
+│  (new)  │  pane   │
+└─────────┴─────────┘
+
+┌─────────────────┐
+│    up (new)     │  --direction up
+├─────────────────┤
+│  current pane   │
+└─────────────────┘
+
+┌─────────────────┐
+│  current pane   │  --direction down
+├─────────────────┤
+│   down (new)    │
+└─────────────────┘
+```
+
+## JSON Response Example
+
+```json
+{
+  "pane_id": "550e8400-e29b-41d4-a716-446655440003",
+  "pane_ref": "p4",
+  "surface_id": "550e8400-e29b-41d4-a716-446655440010",
+  "surface_ref": "s7",
+  "workspace_id": "550e8400-e29b-41d4-a716-446655440020",
+  "workspace_ref": "ws1"
+}
+```
+
+## CLI Output Example
+
+```
+OK p4 s7 ws1
+```
+
+## Related Methods
+
+- [pane.list](/api/pane/list) - List all panes in a workspace
+- [pane.focus](/api/pane/focus) - Focus a specific pane
+- [pane.surfaces](/api/pane/surfaces) - List surfaces within a pane
+- [surface.create](/api/surface/create) - Create a surface within an existing pane
+- [surface.split](/api/surface/split) - Split a surface within the same pane

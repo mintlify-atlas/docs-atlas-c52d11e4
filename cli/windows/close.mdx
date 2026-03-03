@@ -1,0 +1,98 @@
+---
+title: close-window
+description: Close a specific window
+---
+
+Closes the specified window and all workspaces it contains.
+
+## Usage
+
+```bash
+cmux close-window --window <id|ref|index>
+```
+
+## Flags
+
+<ParamField path="--window" type="string" required>
+  Window to close. Can be specified as:
+  - Window ID (UUID)
+  - Window reference (e.g., `window:1`)
+  - Index number (e.g., `0`, `1`)
+</ParamField>
+
+## Output
+
+The command returns a success message:
+
+```
+OK
+```
+
+## Examples
+
+### Close window by index
+
+```bash
+cmux close-window --window 0
+```
+
+Closes the first window (index 0).
+
+### Close window by reference
+
+```bash
+cmux close-window --window window:1
+```
+
+Closes the window with reference `window:1`.
+
+### Close window by UUID
+
+```bash
+cmux close-window --window 550e8400-e29b-41d4-a716-446655440000
+```
+
+Closes the window with the specified UUID.
+
+### Close all windows except the first
+
+```bash
+#!/bin/bash
+# Get all window IDs except the first one
+WINDOW_IDS=$(cmux list-windows --json | jq -r '.[1:][].id')
+
+# Close each window
+for WINDOW_ID in $WINDOW_IDS; do
+  cmux close-window --window "$WINDOW_ID"
+done
+```
+
+### Close empty windows
+
+```bash
+#!/bin/bash
+# Find and close windows with no workspaces
+cmux list-windows --json | jq -r '.[] | select(.workspace_count == 0) | .id' | while read WINDOW_ID; do
+  cmux close-window --window "$WINDOW_ID"
+done
+```
+
+## Window Identifiers
+
+Windows can be identified in three ways:
+
+1. **Index**: Zero-based position in the window list (e.g., `0`, `1`, `2`)
+2. **Reference**: A symbolic reference like `window:1`
+3. **UUID**: The unique identifier for the window
+
+You can get window identifiers using the [list-windows](/cli/windows/list) command.
+
+## Warning
+
+Closing a window will close all workspaces and surfaces it contains. This action cannot be undone.
+
+## Related Commands
+
+- [list-windows](/cli/windows/list) - List all open windows
+- [new-window](/cli/windows/create) - Create a new window
+- [focus-window](/cli/windows/focus) - Focus a specific window

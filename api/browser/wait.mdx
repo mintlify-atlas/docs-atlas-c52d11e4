@@ -1,0 +1,439 @@
+---
+title: browser.wait
+description: Wait for page conditions before proceeding
+---
+
+## Method
+
+`browser.wait`
+
+## Description
+
+Waits for specified page conditions to be met before proceeding. This is essential for handling dynamic content, async page loads, and ensuring elements are ready for interaction.
+
+## Wait Conditions
+
+You can wait for:
+- **Element presence**: Element matching selector exists in DOM
+- **Text content**: Page contains specific text
+- **URL pattern**: Current URL matches pattern
+- **Load state**: Page reaches specific load state (`load`, `domcontentloaded`)
+- **Custom function**: JavaScript function returns truthy value
+
+## Parameters
+
+<ParamField path="surface_id" type="string" required>
+  Browser surface ID (UUID or ref like `surface:1`)
+</ParamField>
+
+<ParamField path="selector" type="string">
+  CSS selector or element ref to wait for (e.g., `@e3`, `.modal`, `#content`)
+</ParamField>
+
+<ParamField path="text_contains" type="string">
+  Wait until page contains this text (case-sensitive substring match)
+</ParamField>
+
+<ParamField path="url_contains" type="string">
+  Wait until current URL contains this substring
+</ParamField>
+
+<ParamField path="load_state" type="string">
+  Wait for page load state: `load` (full load) or `domcontentloaded` (DOM ready)
+</ParamField>
+
+<ParamField path="function" type="string">
+  JavaScript function that returns truthy when condition is met (e.g., `() => document.readyState === 'complete'`)
+</ParamField>
+
+<ParamField path="timeout_ms" type="integer">
+  Timeout in milliseconds (default: 30000)
+</ParamField>
+
+## Response
+
+<ResponseField name="ok" type="boolean">
+  Always `true` on success
+</ResponseField>
+
+<ResponseField name="matched" type="boolean">
+  Whether the condition was met (true on success)
+</ResponseField>
+
+<ResponseField name="surface_id" type="string">
+  Surface UUID
+</ResponseField>
+
+<ResponseField name="surface_ref" type="string">
+  Surface short ref
+</ResponseField>
+
+## CLI Usage
+
+```bash
+# Wait for element by selector
+cmux browser surface:1 wait "button.submit"
+
+# Wait for element ref from snapshot
+cmux browser surface:1 wait @e5
+
+# Wait for text to appear
+cmux browser surface:1 wait --text "Login successful"
+
+# Wait for URL change
+cmux browser surface:1 wait --url-contains "/dashboard"
+
+# Wait for page load
+cmux browser surface:1 wait --load-state load
+
+# Wait for DOM ready
+cmux browser surface:1 wait --load-state domcontentloaded
+
+# Wait with custom function
+cmux browser surface:1 wait --function "() => document.querySelectorAll('.item').length > 10"
+
+# Wait with timeout (seconds)
+cmux browser surface:1 wait --timeout 10 ".slow-loading-element"
+
+# Wait with timeout (milliseconds)
+cmux browser surface:1 wait --timeout-ms 5000 ".element"
+```
+
+## Agent-Browser Compatibility
+
+This method corresponds to:
+- `agent-browser wait <selector>`
+- `agent-browser wait --text <text>`
+- `agent-browser wait --url <pattern>`
+
+**Key differences:**
+- cmux requires explicit surface targeting
+- Load states: `load` (complete) and `domcontentloaded` (interactive)
+- Default timeout is 30 seconds (30000ms)
+
+## Examples
+
+<CodeGroup>
+
+```bash CLI
+# Wait for page load after navigation
+cmux browser surface:1 navigate https://example.com
+cmux browser surface:1 wait --load-state domcontentloaded
+
+# Wait for element before clicking
+cmux browser surface:1 wait "button.accept"
+cmux browser surface:1 click "button.accept"
+
+# Wait for success message
+cmux browser surface:1 click @e3
+cmux browser surface:1 wait --text "Success"
+
+# Wait for URL change after login
+cmux browser surface:1 click "button[type='submit']"
+cmux browser surface:1 wait --url-contains "/dashboard"
+
+# Wait for dynamic content
+cmux browser surface:1 wait --function "() => document.querySelectorAll('.product').length >= 20"
+```
+
+```python Python
+import json
+import subprocess
+
+def wait(surface_id: str, selector: str = None, text: str = None, 
+         url_contains: str = None, load_state: str = None,
+         timeout_sec: int = 30) -> dict:
+    cmd = ["cmux", "browser", surface_id, "wait", "--json"]
+    
+    if selector:
+        cmd.extend(["--selector", selector])
+    if text:
+        cmd.extend(["--text", text])
+    if url_contains:
+        cmd.extend(["--url-contains", url_contains])
+    if load_state:
+        cmd.extend(["--load-state", load_state])
+    if timeout_sec != 30:
+        cmd.extend(["--timeout", str(timeout_sec)])
+    
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    return json.loads(result.stdout)
+
+# Wait for element
+wait("surface:1", selector=".modal")
+print("Modal appeared")
+
+# Wait for text with timeout
+try:
+    wait("surface:1", text="Error", timeout_sec=5)
+    print("Error message found")
+except:
+    print("No error (good!)")
+
+# Wait for navigation
+wait("surface:1", url_contains="/success")
+print("Redirected to success page")
+```
+
+```javascript JavaScript
+const { execSync } = require('child_process');
+
+function wait(surfaceId, options = {}) {
+  const cmd = ['cmux', 'browser', surfaceId, 'wait', '--json'];
+  
+  if (options.selector) cmd.push('--selector', options.selector);
+  if (options.text) cmd.push('--text', options.text);
+  if (options.urlContains) cmd.push('--url-contains', options.urlContains);
+  if (options.loadState) cmd.push('--load-state', options.loadState);
+  if (options.timeoutSec) cmd.push('--timeout', options.timeoutSec.toString());
+  
+  const output = execSync(cmd.join(' '), { encoding: 'utf-8' });
+  return JSON.parse(output);
+}
+
+// Wait for page load
+wait('surface:1', { loadState: 'load' });
+
+// Wait for modal to appear
+wait('surface:1', { selector: '.modal', timeoutSec: 10 });
+
+// Wait for success text
+wait('surface:1', { text: 'Operation completed' });
+```
+
+</CodeGroup>
+
+## Wait Condition Types
+
+### Element Selector
+
+Waits for element to exist in DOM:
+
+```bash
+# Wait for button
+cmux browser surface:1 wait "button.submit"
+
+# Wait for modal
+cmux browser surface:1 wait ".modal-dialog"
+
+# Wait for element ref
+cmux browser surface:1 wait @e5
+```
+
+### Text Content
+
+Waits for text to appear anywhere on page:
+
+```bash
+# Wait for success message
+cmux browser surface:1 wait --text "Login successful"
+
+# Wait for error
+cmux browser surface:1 wait --text "Invalid credentials"
+
+# Case-sensitive substring match
+cmux browser surface:1 wait --text "Welcome back"
+```
+
+### URL Pattern
+
+Waits for URL to contain substring:
+
+```bash
+# Wait for redirect to dashboard
+cmux browser surface:1 wait --url-contains "/dashboard"
+
+# Wait for query param
+cmux browser surface:1 wait --url-contains "?success=true"
+
+# Wait for URL change
+cmux browser surface:1 wait --url "/new-page"
+```
+
+### Load States
+
+Waits for page lifecycle events:
+
+```bash
+# Wait for full page load (all resources)
+cmux browser surface:1 wait --load-state load
+
+# Wait for DOM ready (faster, use for most cases)
+cmux browser surface:1 wait --load-state domcontentloaded
+```
+
+**Load state comparison:**
+- `domcontentloaded`: DOM parsed and ready (images may still be loading)
+- `load`: All resources loaded (images, styles, scripts)
+
+### Custom JavaScript Function
+
+Waits for function to return truthy value:
+
+```bash
+# Wait for element count
+cmux browser surface:1 wait --function "() => document.querySelectorAll('.item').length >= 10"
+
+# Wait for specific state
+cmux browser surface:1 wait --function "() => window.appReady === true"
+
+# Wait for form valid
+cmux browser surface:1 wait --function "() => document.querySelector('form').checkValidity()"
+
+# Complex condition
+cmux browser surface:1 wait --function "
+  () => {
+    const items = document.querySelectorAll('.product');
+    return items.length > 0 && items[0].textContent.trim() !== '';
+  }
+"
+```
+
+## Use Cases
+
+### Wait After Navigation
+```bash
+cmux browser surface:1 navigate https://example.com
+cmux browser surface:1 wait --load-state domcontentloaded
+cmux browser surface:1 snapshot --interactive
+```
+
+### Wait for Dynamic Content
+```bash
+# Click to load more
+cmux browser surface:1 click "button.load-more"
+
+# Wait for new items
+cmux browser surface:1 wait --function "() => document.querySelectorAll('.item').length > 20"
+```
+
+### Wait for Form Validation
+```bash
+cmux browser surface:1 type @e1 "invalid-email"
+
+# Wait for error message
+cmux browser surface:1 wait --text "Invalid email format"
+```
+
+### Wait for Modal
+```bash
+cmux browser surface:1 click "button.delete"
+
+# Wait for confirmation modal
+cmux browser surface:1 wait ".confirmation-modal"
+
+# Confirm
+cmux browser surface:1 click ".confirmation-modal button.confirm"
+```
+
+### Wait for Search Results
+```bash
+cmux browser surface:1 type "input[type='search']" "query"
+cmux browser surface:1 press Enter
+
+# Wait for results
+cmux browser surface:1 wait ".search-results"
+
+# Get results
+cmux browser surface:1 snapshot --selector ".search-results"
+```
+
+### Wait for AJAX Completion
+```bash
+cmux browser surface:1 click "button.fetch-data"
+
+# Wait for spinner to disappear (using function)
+cmux browser surface:1 wait --function "() => !document.querySelector('.spinner')"
+
+# Or wait for content to appear
+cmux browser surface:1 wait ".data-loaded"
+```
+
+## Timeouts
+
+```bash
+# Default timeout (30 seconds)
+cmux browser surface:1 wait ".element"
+
+# Custom timeout (10 seconds)
+cmux browser surface:1 wait --timeout 10 ".slow-element"
+
+# Short timeout (2 seconds)
+cmux browser surface:1 wait --timeout 2 ".fast-element"
+
+# Timeout in milliseconds
+cmux browser surface:1 wait --timeout-ms 5000 ".element"
+```
+
+## Error Codes
+
+| Code | Description |
+|------|-------------|
+| `not_found` | Surface not found or not a browser surface |
+| `invalid_params` | Missing wait condition or invalid parameters |
+| `timeout` | Condition not met within timeout period |
+| `invalid_state` | Browser surface not ready |
+
+## Combining Conditions
+
+You can only specify one condition per wait call. For multiple conditions, chain waits:
+
+```bash
+# Wait for page load, then element
+cmux browser surface:1 wait --load-state domcontentloaded
+cmux browser surface:1 wait ".main-content"
+
+# Wait for URL, then text
+cmux browser surface:1 wait --url-contains "/dashboard"
+cmux browser surface:1 wait --text "Welcome"
+```
+
+## Best Practices
+
+1. **Always wait after navigation**
+   ```bash
+   cmux browser surface:1 navigate https://example.com
+   cmux browser surface:1 wait --load-state domcontentloaded
+   ```
+
+2. **Wait before interactions**
+   ```bash
+   cmux browser surface:1 wait "button.submit"
+   cmux browser surface:1 click "button.submit"
+   ```
+
+3. **Use domcontentloaded for speed** (unless you need images/resources)
+   ```bash
+   cmux browser surface:1 wait --load-state domcontentloaded
+   ```
+
+4. **Wait for text to verify actions**
+   ```bash
+   cmux browser surface:1 click "button.save"
+   cmux browser surface:1 wait --text "Saved successfully"
+   ```
+
+5. **Set appropriate timeouts**
+   ```bash
+   # Fast operations
+   cmux browser surface:1 wait --timeout 5 ".instant-element"
+   
+   # Slow operations
+   cmux browser surface:1 wait --timeout 60 ".slow-loading-data"
+   ```
+
+6. **Use functions for complex conditions**
+   ```bash
+   cmux browser surface:1 wait --function "() => {
+     const el = document.querySelector('.status');
+     return el && el.textContent === 'Ready';
+   }"
+   ```
+
+## See Also
+
+- [browser.navigate](/api/browser/navigate) - Navigate to URL
+- [browser.click](/api/browser/click) - Click elements
+- [browser.type](/api/browser/type) - Type text
+- [browser.snapshot](/api/browser/snapshot) - Capture page state
+- [browser.eval](/api/browser/eval) - Execute JavaScript

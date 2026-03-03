@@ -1,0 +1,170 @@
+---
+title: window.list
+description: List all application windows
+---
+
+## Overview
+
+Returns a list of all cmux application windows with their properties and current state.
+
+## Request Format
+
+### JSON-RPC
+
+```json
+{
+  "id": "<request-id>",
+  "method": "window.list",
+  "params": {}
+}
+```
+
+## Parameters
+
+This method accepts no parameters.
+
+## Response
+
+### Success Response
+
+<ResponseField name="ok" type="boolean" required>
+  Always `true` for successful responses
+</ResponseField>
+
+<ResponseField name="result" type="object" required>
+  <Expandable title="properties">
+    <ResponseField name="windows" type="array" required>
+      Array of window objects
+      <Expandable title="window object">
+        <ResponseField name="id" type="string" required>
+          Window UUID identifier
+        </ResponseField>
+        <ResponseField name="ref" type="string" required>
+          Human-readable reference in format `window:N`
+        </ResponseField>
+        <ResponseField name="index" type="integer" required>
+          Zero-based window index
+        </ResponseField>
+        <ResponseField name="key" type="boolean" required>
+          Whether this is the key (focused) window
+        </ResponseField>
+        <ResponseField name="visible" type="boolean" required>
+          Whether the window is currently visible
+        </ResponseField>
+        <ResponseField name="workspace_count" type="integer" required>
+          Number of workspaces in this window
+        </ResponseField>
+        <ResponseField name="selected_workspace_id" type="string | null" required>
+          UUID of the currently selected workspace, or `null` if none
+        </ResponseField>
+        <ResponseField name="selected_workspace_ref" type="string | null" required>
+          Reference to selected workspace in format `workspace:N`, or `null` if none
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Success Response
+
+```json
+{
+  "ok": true,
+  "result": {
+    "windows": [
+      {
+        "id": "A1B2C3D4-E5F6-7890-ABCD-EF1234567890",
+        "ref": "window:0",
+        "index": 0,
+        "key": true,
+        "visible": true,
+        "workspace_count": 3,
+        "selected_workspace_id": "12345678-ABCD-EF12-3456-7890ABCDEF12",
+        "selected_workspace_ref": "workspace:0"
+      },
+      {
+        "id": "B2C3D4E5-F678-90AB-CDEF-123456789012",
+        "ref": "window:1",
+        "index": 1,
+        "key": false,
+        "visible": true,
+        "workspace_count": 2,
+        "selected_workspace_id": "23456789-BCDE-F123-4567-890ABCDEF123",
+        "selected_workspace_ref": "workspace:0"
+      }
+    ]
+  }
+}
+```
+
+## Error Codes
+
+This method does not return errors under normal operation. It returns an empty array if no windows exist.
+
+## Usage Examples
+
+### CLI
+
+```bash
+# List all windows
+cmux list-windows
+
+# List windows with JSON output
+cmux list-windows --json
+
+# List windows showing both UUIDs and refs
+cmux list-windows --json --id-format both
+```
+
+### Python
+
+```python
+import json
+import socket
+
+def list_windows(socket_path="/tmp/cmux.sock"):
+    request = {
+        "id": "req-1",
+        "method": "window.list",
+        "params": {}
+    }
+    
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+        sock.connect(socket_path)
+        sock.sendall((json.dumps(request) + "\n").encode())
+        response = json.loads(sock.recv(8192).decode().strip())
+        
+    if response["ok"]:
+        for window in response["result"]["windows"]:
+            key_marker = "*" if window["key"] else " "
+            print(f"{key_marker} {window['ref']}: {window['workspace_count']} workspaces")
+    
+    return response
+
+list_windows()
+```
+
+### Swift
+
+```swift
+let request: [String: Any] = [
+    "id": UUID().uuidString,
+    "method": "window.list",
+    "params": [:]
+]
+
+let response = try client.sendV2(method: "window.list", params: [:])
+let windows = response["windows"] as? [[String: Any]] ?? []
+
+for window in windows {
+    let ref = window["ref"] as? String ?? ""
+    let count = window["workspace_count"] as? Int ?? 0
+    let isKey = window["key"] as? Bool ?? false
+    print("\(isKey ? "*" : " ") \(ref): \(count) workspaces")
+}
+```
+
+## Related Methods
+
+- [window.focus](/api/window/focus) - Focus a specific window
+- [workspace.list](/api/workspace/list) - List workspaces in a window

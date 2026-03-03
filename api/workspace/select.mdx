@@ -1,0 +1,125 @@
+---
+title: workspace.select
+description: Select (activate) a workspace in its window
+---
+
+## Overview
+
+Selects the specified workspace, making it the active workspace in its window. Optionally focuses the window.
+
+## Method
+
+```
+workspace.select
+```
+
+## Parameters
+
+<ParamField path="workspace_id" type="string" required>
+  Workspace identifier (UUID or ref)
+</ParamField>
+
+<ParamField path="window_id" type="string" optional>
+  Window identifier (UUID or ref). If omitted, the workspace's window is determined automatically.
+</ParamField>
+
+## Response
+
+<ResponseField name="window_id" type="string">
+  UUID of the window containing the workspace
+</ResponseField>
+
+<ResponseField name="window_ref" type="string">
+  Short reference for the window
+</ResponseField>
+
+<ResponseField name="workspace_id" type="string">
+  UUID of the selected workspace
+</ResponseField>
+
+<ResponseField name="workspace_ref" type="string">
+  Short reference for the workspace
+</ResponseField>
+
+## Error Codes
+
+<ResponseField name="unavailable" type="error">
+  TabManager not available
+</ResponseField>
+
+<ResponseField name="invalid_params" type="error">
+  Missing or invalid `workspace_id`
+</ResponseField>
+
+<ResponseField name="not_found" type="error">
+  Workspace not found in the specified window
+</ResponseField>
+
+## Focus Behavior
+
+This is a **focus-intent command**. It may:
+- Focus the window containing the workspace
+- Update internal focus tracking
+- Bring the app to front (when issued by CLI)
+
+Source: `Sources/TerminalController.swift:2419`
+
+```swift
+v2MaybeFocusWindow(for: tabManager)
+v2MaybeSelectWorkspace(tabManager, workspace: ws)
+```
+
+## Example
+
+### Select by reference
+
+```bash
+cmux select-workspace --workspace ws2
+```
+
+### Select by UUID
+
+```bash
+cmux select-workspace --workspace 650e8400-e29b-41d4-a716-446655440002
+```
+
+## Socket API
+
+```json
+{
+  "id": "req-1",
+  "method": "workspace.select",
+  "params": {
+    "workspace_id": "650e8400-e29b-41d4-a716-446655440002"
+  }
+}
+```
+
+### Response
+
+```json
+{
+  "ok": true,
+  "result": {
+    "window_id": "550e8400-e29b-41d4-a716-446655440000",
+    "window_ref": "w1",
+    "workspace_id": "650e8400-e29b-41d4-a716-446655440002",
+    "workspace_ref": "ws2"
+  }
+}
+```
+
+## Related Methods
+
+- `workspace.next` - Select next workspace
+- `workspace.previous` - Select previous workspace
+- `workspace.last` - Return to last selected workspace
+- `workspace.current` - Get currently selected workspace
+
+## Implementation
+
+Source: `Sources/TerminalController.swift:2408`
+
+- Thread-safe via `v2MainSync`
+- Updates workspace selection history
+- Respects socket focus policy

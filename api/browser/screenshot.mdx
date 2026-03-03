@@ -1,0 +1,327 @@
+---
+title: browser.screenshot
+description: Capture a screenshot of a browser surface
+---
+
+## Method
+
+`browser.screenshot`
+
+## Description
+
+Captures a PNG screenshot of the visible browser surface viewport. The image is returned as base64-encoded PNG data.
+
+## Parameters
+
+<ParamField path="surface_id" type="string" required>
+  Browser surface ID (UUID or ref like `surface:1`)
+</ParamField>
+
+## Response
+
+<ResponseField name="ok" type="boolean">
+  Always `true` on success
+</ResponseField>
+
+<ResponseField name="png_base64" type="string">
+  Base64-encoded PNG image data
+</ResponseField>
+
+<ResponseField name="width" type="integer">
+  Screenshot width in pixels
+</ResponseField>
+
+<ResponseField name="height" type="integer">
+  Screenshot height in pixels
+</ResponseField>
+
+<ResponseField name="surface_id" type="string">
+  Surface UUID
+</ResponseField>
+
+<ResponseField name="surface_ref" type="string">
+  Surface short ref
+</ResponseField>
+
+## CLI Usage
+
+```bash
+# Capture screenshot (outputs base64 JSON)
+cmux browser surface:1 screenshot --json
+
+# Save screenshot to file
+cmux browser surface:1 screenshot --out screenshot.png
+
+# Capture and save
+cmux browser surface:1 screenshot --out /tmp/page.png
+```
+
+## Agent-Browser Compatibility
+
+This method corresponds to:
+- `agent-browser screenshot`
+- `agent-browser screenshot <path>`
+
+**Key differences:**
+- cmux captures the visible viewport only (no full-page scroll)
+- Use `--out` to save directly to file
+- Base64 output in JSON format for programmatic use
+
+## Examples
+
+<CodeGroup>
+
+```bash CLI
+# Save screenshot to file
+cmux browser surface:1 screenshot --out screenshot.png
+echo "Screenshot saved"
+
+# Capture as JSON
+cmux browser surface:1 screenshot --json > screenshot.json
+
+# Verify screenshot exists
+ls -lh screenshot.png
+```
+
+```python Python
+import json
+import subprocess
+import base64
+from pathlib import Path
+
+def screenshot(surface_id: str, output_path: str = None) -> dict:
+    cmd = ["cmux", "browser", surface_id, "screenshot", "--json"]
+    if output_path:
+        cmd.extend(["--out", output_path])
+    
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    return json.loads(result.stdout)
+
+# Save to file via CLI
+screenshot("surface:1", "page.png")
+print("Saved to page.png")
+
+# Get base64 and decode
+data = screenshot("surface:1")
+png_bytes = base64.b64decode(data["png_base64"])
+
+# Write to file
+Path("screenshot.png").write_bytes(png_bytes)
+print(f"Captured {data['width']}x{data['height']} screenshot")
+```
+
+```javascript JavaScript
+const { execSync } = require('child_process');
+const fs = require('fs');
+
+function screenshot(surfaceId, outputPath) {
+  const cmd = ['cmux', 'browser', surfaceId, 'screenshot'];
+  if (outputPath) {
+    cmd.push('--out', outputPath);
+  } else {
+    cmd.push('--json');
+  }
+  
+  const output = execSync(cmd.join(' '), { encoding: 'utf-8' });
+  return outputPath ? { ok: true } : JSON.parse(output);
+}
+
+// Save directly
+screenshot('surface:1', 'page.png');
+console.log('Screenshot saved to page.png');
+
+// Get base64 data
+const data = screenshot('surface:1');
+const buffer = Buffer.from(data.png_base64, 'base64');
+fs.writeFileSync('screenshot.png', buffer);
+console.log(`Captured ${data.width}x${data.height} screenshot`);
+```
+
+</CodeGroup>
+
+## Viewport vs Full Page
+
+This method captures the **visible viewport only**. For full-page screenshots:
+
+1. Use JavaScript to scroll and stitch images (not built-in)
+2. Or capture viewport + scroll + repeat:
+
+```bash
+# Capture top of page
+cmux browser surface:1 screenshot --out top.png
+
+# Scroll down
+cmux browser surface:1 scroll --dy 800
+
+# Capture next section
+cmux browser surface:1 screenshot --out middle.png
+
+# Continue scrolling and capturing...
+```
+
+**Note**: Full-page screenshot stitching is not currently supported natively.
+
+## Use Cases
+
+### Visual Regression Testing
+```bash
+# Capture baseline
+cmux browser surface:1 navigate https://example.com
+cmux browser surface:1 wait --load-state load
+cmux browser surface:1 screenshot --out baseline.png
+
+# After changes
+cmux browser surface:1 navigate https://example.com
+cmux browser surface:1 wait --load-state load
+cmux browser surface:1 screenshot --out current.png
+
+# Compare with image diff tool
+compare baseline.png current.png diff.png
+```
+
+### Error Debugging
+```bash
+# Capture state on error
+cmux browser surface:1 click "button.submit"
+if ! cmux browser surface:1 wait --timeout 5 --text "Success"; then
+  cmux browser surface:1 screenshot --out error-state.png
+  echo "Error occurred, screenshot saved"
+fi
+```
+
+### Documentation
+```bash
+# Capture UI states for docs
+cmux browser surface:1 navigate https://app.example.com/login
+cmux browser surface:1 screenshot --out docs/login-page.png
+
+cmux browser surface:1 navigate https://app.example.com/dashboard
+cmux browser surface:1 screenshot --out docs/dashboard.png
+```
+
+### CI/CD Artifact Collection
+```bash
+# In test script
+for step in login dashboard profile; do
+  echo "Testing $step..."
+  cmux browser surface:1 navigate "https://app.example.com/$step"
+  cmux browser surface:1 wait --load-state load
+  cmux browser surface:1 screenshot --out "screenshots/$step.png"
+done
+```
+
+## Image Format
+
+Screenshots are captured as PNG format:
+
+- **Encoding**: Base64 (in JSON response)
+- **Color depth**: 24-bit RGB (no transparency in most cases)
+- **Compression**: PNG default compression
+- **Viewport**: Matches browser surface visible area
+
+## Error Codes
+
+| Code | Description |
+|------|-------------|
+| `not_found` | Surface not found or not a browser surface |
+| `invalid_state` | Browser surface not ready or rendering failed |
+| `timeout` | Screenshot capture timed out |
+
+## Programmatic Access
+
+### Decode Base64 in Python
+```python
+import json
+import subprocess
+import base64
+from PIL import Image
+import io
+
+# Capture screenshot
+cmd = ["cmux", "browser", "surface:1", "screenshot", "--json"]
+result = subprocess.run(cmd, capture_output=True, text=True)
+data = json.loads(result.stdout)
+
+# Decode base64 to image
+png_bytes = base64.b64decode(data["png_base64"])
+image = Image.open(io.BytesIO(png_bytes))
+
+# Process image
+print(f"Image size: {image.size}")
+image.show()  # Display
+image.save("screenshot.png")  # Save
+```
+
+### Decode Base64 in JavaScript
+```javascript
+const fs = require('fs');
+const { execSync } = require('child_process');
+
+// Capture screenshot
+const output = execSync(
+  'cmux browser surface:1 screenshot --json',
+  { encoding: 'utf-8' }
+);
+const data = JSON.parse(output);
+
+// Decode and save
+const buffer = Buffer.from(data.png_base64, 'base64');
+fs.writeFileSync('screenshot.png', buffer);
+
+console.log(`Saved ${data.width}x${data.height} screenshot`);
+```
+
+## Best Practices
+
+1. **Wait for page load** before screenshot
+   ```bash
+   cmux browser surface:1 navigate https://example.com
+   cmux browser surface:1 wait --load-state load
+   cmux browser surface:1 screenshot --out page.png
+   ```
+
+2. **Use --out for file output** (more efficient than base64 decode)
+   ```bash
+   # Preferred
+   cmux browser surface:1 screenshot --out screenshot.png
+   
+   # Avoid (extra decode step)
+   cmux browser surface:1 screenshot --json | jq -r '.png_base64' | base64 -d > screenshot.png
+   ```
+
+3. **Organize screenshots** in timestamped directories
+   ```bash
+   timestamp=$(date +%Y%m%d-%H%M%S)
+   cmux browser surface:1 screenshot --out "screenshots/$timestamp.png"
+   ```
+
+4. **Capture at consistent viewport sizes** for comparison
+   ```bash
+   # Set viewport first (if supported)
+   cmux browser surface:1 eval "window.resizeTo(1280, 720)"
+   cmux browser surface:1 screenshot --out screenshot.png
+   ```
+
+5. **Handle errors gracefully**
+   ```bash
+   if cmux browser surface:1 screenshot --out test.png 2>/dev/null; then
+     echo "Screenshot captured"
+   else
+     echo "Screenshot failed"
+   fi
+   ```
+
+## Limitations
+
+1. **Viewport only**: Only captures visible area (no automatic scrolling)
+2. **No element highlighting**: Use `browser.highlight` before screenshot if needed
+3. **No delay option**: Use `browser.wait` or `sleep` before capture
+4. **No full-page mode**: Requires manual scroll + stitch for full page
+5. **WKWebView constraints**: Screenshot quality depends on macOS WKWebView rendering
+
+## See Also
+
+- [browser.snapshot](/api/browser/snapshot) - Text-based DOM snapshot
+- [browser.wait](/api/browser/wait) - Wait before screenshot
+- [browser.navigate](/api/browser/navigate) - Navigate to page
+- [browser.eval](/api/browser/eval) - Execute JavaScript

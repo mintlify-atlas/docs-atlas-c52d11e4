@@ -1,0 +1,107 @@
+---
+title: surface.list
+description: List all surfaces in a workspace
+---
+
+Lists all surfaces (panels) in the specified workspace, including their IDs, types, titles, and focus state.
+
+## Method
+
+```
+surface.list
+```
+
+## Parameters
+
+<ParamField path="workspace_id" type="string">
+  The UUID of the workspace to list surfaces in. If not provided, uses the currently selected workspace.
+</ParamField>
+
+<ParamField path="window_id" type="string">
+  The UUID of the window to target. If not provided, uses the current window.
+</ParamField>
+
+## Response
+
+Returns an object with the following fields:
+
+<ResponseField name="workspace_id" type="string">
+  The UUID of the workspace
+</ResponseField>
+
+<ResponseField name="workspace_ref" type="string">
+  The human-readable reference for the workspace (e.g., `workspace:1`)
+</ResponseField>
+
+<ResponseField name="window_id" type="string">
+  The UUID of the window containing the workspace
+</ResponseField>
+
+<ResponseField name="window_ref" type="string">
+  The human-readable reference for the window (e.g., `window:1`)
+</ResponseField>
+
+<ResponseField name="surfaces" type="array">
+  Array of surface objects, each containing:
+  - `id` (string): Surface UUID
+  - `ref` (string): Human-readable reference (e.g., `surface:1`)
+  - `index` (number): Position in the workspace (0-based)
+  - `type` (string): Surface type (`terminal` or `browser`)
+  - `title` (string): Display title of the surface
+  - `focused` (boolean): Whether this surface currently has focus
+  - `pane_id` (string): UUID of the containing pane
+  - `pane_ref` (string): Human-readable pane reference
+  - `index_in_pane` (number): Position within the pane (0-based)
+  - `selected_in_pane` (boolean): Whether this is the selected surface in its pane
+</ResponseField>
+
+## Example
+
+<CodeGroup>
+```json Socket Request
+{
+  "id": "1",
+  "method": "surface.list",
+  "params": {}
+}
+```
+
+```json Response
+{
+  "ok": true,
+  "result": {
+    "workspace_id": "550e8400-e29b-41d4-a716-446655440000",
+    "workspace_ref": "workspace:1",
+    "window_id": "660e8400-e29b-41d4-a716-446655440000",
+    "window_ref": "window:1",
+    "surfaces": [
+      {
+        "id": "770e8400-e29b-41d4-a716-446655440000",
+        "ref": "surface:1",
+        "index": 0,
+        "type": "terminal",
+        "title": "bash",
+        "focused": true,
+        "pane_id": "880e8400-e29b-41d4-a716-446655440000",
+        "pane_ref": "pane:1",
+        "index_in_pane": 0,
+        "selected_in_pane": true
+      }
+    ]
+  }
+}
+```
+</CodeGroup>
+
+## CLI Usage
+
+```bash
+cmux list-panels
+cmux list-panels --workspace workspace:1
+```
+
+## See Also
+
+- [surface.focus](/api/surface/focus) - Focus a specific surface
+- [surface.create](/api/surface/create) - Create a new surface
+- [pane.list](/api/pane/list) - List all panes in a workspace

@@ -1,0 +1,315 @@
+---
+title: browser.type
+description: Type text into an input element
+---
+
+## Method
+
+`browser.type`
+
+## Description
+
+Types text character-by-character into an input element, simulating real keyboard input. This method focuses the element, clears existing content, and types the new text.
+
+Use `browser.fill` for instant text replacement without keyboard simulation.
+
+## Parameters
+
+<ParamField path="surface_id" type="string" required>
+  Browser surface ID (UUID or ref like `surface:1`)
+</ParamField>
+
+<ParamField path="selector" type="string" required>
+  CSS selector or element ref (e.g., `@e1`, `input[name='email']`)
+</ParamField>
+
+<ParamField path="text" type="string" required>
+  Text to type into the element
+</ParamField>
+
+<ParamField path="snapshot_after" type="boolean">
+  If true, returns a post-action snapshot with refs, title, and URL
+</ParamField>
+
+## Response
+
+<ResponseField name="ok" type="boolean">
+  Always `true` on success
+</ResponseField>
+
+<ResponseField name="post_action_snapshot" type="string">
+  DOM snapshot after typing (only present if `snapshot_after: true`)
+</ResponseField>
+
+<ResponseField name="surface_id" type="string">
+  Surface UUID
+</ResponseField>
+
+<ResponseField name="surface_ref" type="string">
+  Surface short ref
+</ResponseField>
+
+## CLI Usage
+
+```bash
+# Type using element ref
+cmux browser surface:1 type @e1 "user@example.com"
+
+# Type using CSS selector
+cmux browser surface:1 type "input[name='email']" "user@example.com"
+
+# Type with --text flag
+cmux browser surface:1 type --selector @e1 --text "my text here"
+
+# Type with post-action verification
+cmux browser surface:1 type --snapshot-after @e1 "test@example.com"
+```
+
+## Agent-Browser Compatibility
+
+This method corresponds to:
+- `agent-browser type <selector> <text>`
+
+**Differences from `browser.fill`:**
+- `type`: Character-by-character keyboard simulation (triggers `keydown`, `keypress`, `keyup` events)
+- `fill`: Instant value replacement (triggers `input` and `change` events only)
+
+**Key differences:**
+- cmux requires explicit surface targeting
+- Element refs (`@e1`) come from `browser.snapshot`
+- Text argument must be non-empty (use `browser.fill` with empty string to clear)
+
+## Examples
+
+<CodeGroup>
+
+```bash CLI
+# Login form workflow
+cmux browser surface:1 snapshot --interactive
+# Output:
+# <input @e1 type="email">
+# <input @e2 type="password">
+# <button @e3>Log In</button>
+
+cmux browser surface:1 type @e1 "user@example.com"
+cmux browser surface:1 type @e2 "securePassword123"
+cmux browser surface:1 click @e3
+
+# Type into search box
+cmux browser surface:1 type "input[type='search']" "cmux browser automation"
+
+# Type with verification
+cmux browser surface:1 type --snapshot-after @e1 "test input"
+```
+
+```python Python
+import json
+import subprocess
+
+def type_text(surface_id: str, selector: str, text: str, snapshot_after: bool = False) -> dict:
+    cmd = ["cmux", "browser", surface_id, "type", "--json"]
+    if snapshot_after:
+        cmd.append("--snapshot-after")
+    cmd.extend([selector, text])
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    return json.loads(result.stdout)
+
+# Fill login form
+type_text("surface:1", "@e1", "user@example.com")
+type_text("surface:1", "@e2", "password123")
+
+# Type and verify
+result = type_text("surface:1", "@e1", "new text", snapshot_after=True)
+if "post_action_snapshot" in result:
+    print(result["post_action_snapshot"])
+```
+
+```javascript JavaScript
+const { execSync } = require('child_process');
+
+function typeText(surfaceId, selector, text, options = {}) {
+  const cmd = ['cmux', 'browser', surfaceId, 'type', '--json'];
+  if (options.snapshotAfter) cmd.push('--snapshot-after');
+  cmd.push(selector, text);
+  
+  const output = execSync(cmd.join(' '), { encoding: 'utf-8' });
+  return JSON.parse(output);
+}
+
+// Login flow
+typeText('surface:1', '@e1', 'user@example.com');
+typeText('surface:1', '@e2', 'password');
+
+// Click submit
+execSync('cmux browser surface:1 click @e3');
+```
+
+</CodeGroup>
+
+## browser.fill (Instant Text Replacement)
+
+For faster text input without keyboard simulation:
+
+```bash
+# Fill instantly (no keypress events)
+cmux browser surface:1 fill @e1 "user@example.com"
+
+# Clear input (fill with empty string)
+cmux browser surface:1 fill @e1 ""
+
+# Fill multiple fields quickly
+cmux browser surface:1 fill @e1 "user@example.com"
+cmux browser surface:1 fill @e2 "password123"
+cmux browser surface:1 fill @e3 "John Doe"
+```
+
+**When to use `fill` vs `type`:**
+- **Use `fill`**: Fast data entry, testing with known values, clearing inputs
+- **Use `type`**: Testing keyboard handlers, autocomplete, character validation
+
+## Use Cases
+
+### Form Filling
+```bash
+# Registration form
+cmux browser surface:1 type @e1 "john.doe@example.com"
+cmux browser surface:1 type @e2 "John"
+cmux browser surface:1 type @e3 "Doe"
+cmux browser surface:1 type @e4 "securePass123"
+cmux browser surface:1 click @e5
+```
+
+### Search and Filter
+```bash
+# Type search query
+cmux browser surface:1 type "input[type='search']" "browser automation"
+
+# Wait for results
+cmux browser surface:1 wait --selector ".search-results"
+
+# Get results
+cmux browser surface:1 snapshot --selector ".search-results"
+```
+
+### Text Editor Testing
+```bash
+# Type into textarea
+cmux browser surface:1 type "textarea#editor" "This is a test document."
+
+# Verify content
+cmux browser surface:1 get value "textarea#editor"
+```
+
+### Autocomplete Testing
+```bash
+# Type partial text
+cmux browser surface:1 type "input.autocomplete" "New Y"
+
+# Wait for suggestions
+cmux browser surface:1 wait --selector ".autocomplete-suggestions"
+
+# Click suggestion
+cmux browser surface:1 click ".autocomplete-suggestions li:first-child"
+```
+
+## Special Characters
+
+```bash
+# Type email with special chars
+cmux browser surface:1 type @e1 "user+test@example.com"
+
+# Type with quotes (escape in shell)
+cmux browser surface:1 type @e1 'text with "quotes"'
+
+# Type newlines (use fill for multiline)
+cmux browser surface:1 fill @e1 "Line 1\nLine 2\nLine 3"
+```
+
+## Keyboard Keys
+
+For special keys, use `browser.press`:
+
+```bash
+# Press Enter
+cmux browser surface:1 press Enter
+
+# Press Tab
+cmux browser surface:1 press Tab
+
+# Press Escape
+cmux browser surface:1 press Escape
+
+# Type then submit with Enter
+cmux browser surface:1 type @e1 "search query"
+cmux browser surface:1 press Enter
+```
+
+Common keys: `Enter`, `Tab`, `Escape`, `Backspace`, `Delete`, `ArrowUp`, `ArrowDown`, `ArrowLeft`, `ArrowRight`
+
+## Error Codes
+
+| Code | Description |
+|------|-------------|
+| `not_found` | Surface not found, element not found, or not a browser surface |
+| `invalid_params` | Missing selector or text |
+| `invalid_state` | Element not typeable (hidden, disabled, or not an input) |
+| `timeout` | Type action timed out |
+
+## Input Validation
+
+Verify typed content:
+
+```bash
+# Type text
+cmux browser surface:1 type @e1 "test@example.com"
+
+# Get input value
+cmux browser surface:1 get value @e1
+# Output: test@example.com
+
+# Check for validation errors
+cmux browser surface:1 snapshot --selector ".error-message"
+```
+
+## Best Practices
+
+1. **Wait for element before typing**
+   ```bash
+   cmux browser surface:1 wait --selector "input[name='email']"
+   cmux browser surface:1 type "input[name='email']" "user@example.com"
+   ```
+
+2. **Focus element first** (type does this automatically, but explicit focus can help)
+   ```bash
+   cmux browser surface:1 focus @e1
+   cmux browser surface:1 type @e1 "text"
+   ```
+
+3. **Use fill for speed** when keyboard events don't matter
+   ```bash
+   # Slow (types character by character)
+   cmux browser surface:1 type @e1 "very long text here"
+   
+   # Fast (instant replacement)
+   cmux browser surface:1 fill @e1 "very long text here"
+   ```
+
+4. **Verify after typing** for critical inputs
+   ```bash
+   cmux browser surface:1 type --snapshot-after @e1 "important data"
+   ```
+
+5. **Clear before typing** if needed (use fill with empty string)
+   ```bash
+   cmux browser surface:1 fill @e1 ""
+   cmux browser surface:1 type @e1 "new value"
+   ```
+
+## See Also
+
+- [Interaction Commands](/cli/browser/interaction#fill) - Instant text replacement
+- [Interaction Commands](/cli/browser/interaction#press--key) - Press keyboard keys
+- [browser.snapshot](/api/browser/snapshot) - Get element refs
+- [browser.click](/api/browser/click) - Click elements
+- [browser.wait](/api/browser/wait) - Wait for elements
+- [Automation Commands](/cli/browser/automation#get-commands) - Get input values

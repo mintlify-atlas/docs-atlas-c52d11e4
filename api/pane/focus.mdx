@@ -1,0 +1,100 @@
+---
+title: pane.focus
+description: Focus a specific pane
+---
+
+## Overview
+
+Sets focus to the specified pane within a workspace. The pane's first surface will become active.
+
+## Method
+
+```
+pane.focus
+```
+
+## Parameters
+
+<ParamField path="pane_id" type="string" required>
+  The ID or reference of the pane to focus (e.g., "p1" or UUID)
+</ParamField>
+
+<ParamField path="workspace_id" type="string">
+  The ID of the workspace containing the pane. If omitted, uses the current workspace.
+</ParamField>
+
+## Response
+
+<ResponseField name="pane_id" type="string">
+  The unique identifier of the focused pane
+</ResponseField>
+
+<ResponseField name="pane_ref" type="string">
+  Human-readable reference for the pane (e.g., "p2")
+</ResponseField>
+
+<ResponseField name="workspace_id" type="string">
+  The ID of the workspace containing the pane
+</ResponseField>
+
+<ResponseField name="workspace_ref" type="string">
+  Human-readable reference for the workspace
+</ResponseField>
+
+## CLI Usage
+
+```bash
+# Focus pane by reference
+cmux focus-pane --pane p2
+
+# Focus pane by ID
+cmux focus-pane --pane 550e8400-e29b-41d4-a716-446655440001
+
+# Focus pane in specific workspace
+cmux focus-pane --workspace ws2 --pane p1
+
+# Short form (positional argument)
+cmux focus-pane p3
+
+# JSON output
+cmux focus-pane --pane p2 --json
+```
+
+## JSON Response Example
+
+```json
+{
+  "pane_id": "550e8400-e29b-41d4-a716-446655440001",
+  "pane_ref": "p2",
+  "workspace_id": "550e8400-e29b-41d4-a716-446655440020",
+  "workspace_ref": "ws1"
+}
+```
+
+## CLI Output Example
+
+```
+OK p2 ws1
+```
+
+## Focused State
+
+When a pane is focused:
+- The pane receives keyboard and mouse input
+- The pane is highlighted in the UI
+- The first surface in the pane becomes active
+- The `focused` field is `true` in [pane.list](/api/pane/list) output
+
+## Behavior Notes
+
+- Focusing a pane automatically focuses one of its surfaces
+- If the pane contains multiple surfaces, the most recently selected surface receives focus
+- The previously focused pane loses focus
+- Focus state persists until another pane is focused
+
+## Related Methods
+
+- [pane.list](/api/pane/list) - List panes and see which is focused
+- [pane.create](/api/pane/create) - Create a new pane
+- [surface.focus](/api/surface/focus) - Focus a specific surface within a pane
+- [workspace.select](/api/workspace/select) - Select a workspace

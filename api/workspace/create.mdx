@@ -1,0 +1,148 @@
+---
+title: workspace.create
+description: Create a new workspace with optional working directory
+---
+
+## Overview
+
+Creates a new workspace in the specified window. If `cwd` is provided, the workspace's shell will start in that directory.
+
+## Method
+
+```
+workspace.create
+```
+
+## Parameters
+
+<ParamField path="window_id" type="string" optional>
+  Window identifier (UUID or ref). If omitted, uses the active window.
+</ParamField>
+
+<ParamField path="cwd" type="string" optional>
+  Working directory path for the new workspace. Supports:
+  - Absolute paths: `/Users/name/projects/app`
+  - Tilde expansion: `~/projects/app`
+  - Relative paths: `./subdir` (resolved from CLI's current directory)
+</ParamField>
+
+## Path Resolution
+
+The `cwd` parameter is resolved by the CLI before being sent to the socket:
+
+1. **Tilde expansion**: `~/projects` → `/Users/name/projects`
+2. **Relative paths**: `./app` → `{current_directory}/app`
+3. **Absolute paths**: Used as-is
+
+Source: `CLI/cmux.swift:1511`
+
+```swift
+private func resolvePath(_ path: String) -> String {
+    let expanded = NSString(string: path).expandingTildeInPath
+    if expanded.hasPrefix("/") { return expanded }
+    let cwd = FileManager.default.currentDirectoryPath
+    return (cwd as NSString).appendingPathComponent(expanded)
+}
+```
+
+## Response
+
+<ResponseField name="window_id" type="string">
+  UUID of the window containing the new workspace
+</ResponseField>
+
+<ResponseField name="window_ref" type="string">
+  Short reference for the window
+</ResponseField>
+
+<ResponseField name="workspace_id" type="string">
+  UUID of the newly created workspace
+</ResponseField>
+
+<ResponseField name="workspace_ref" type="string">
+  Short reference for the new workspace (e.g., "ws3")
+</ResponseField>
+
+## Error Codes
+
+<ResponseField name="unavailable" type="error">
+  TabManager not available
+</ResponseField>
+
+<ResponseField name="invalid_params" type="error">
+  `cwd` must be a string if provided
+</ResponseField>
+
+<ResponseField name="internal_error" type="error">
+  Failed to create workspace
+</ResponseField>
+
+## Focus Behavior
+
+The new workspace is automatically selected if the command is issued by a focus-intent operation. Socket commands issued by CLI/automation do not automatically select the workspace unless explicitly configured.
+
+Source: `Sources/TerminalController.swift:2382`
+
+## Example
+
+### Create workspace in current directory
+
+```bash
+cmux new-workspace --cwd ~/projects/app
+```
+
+### Create workspace and run command
+
+```bash
+cmux new-workspace --cwd ~/projects/app --command "npm run dev"
+```
+
+Source: `CLI/cmux.swift:883`
+
+## CLI Implementation
+
+```bash
+cmux new-workspace [--cwd <path>] [--command <text>]
+```
+
+The CLI automatically:
+1. Resolves the `cwd` path
+2. Creates the workspace via `workspace.create`
+3. Waits 500ms for shell initialization (if `--command` is provided)
+4. Sends the command via `surface.send_text`
+
+Source: `CLI/cmux.swift:883-903`
+
+## Socket API
+
+```json
+{
+  "id": "req-1",
+  "method": "workspace.create",
+  "params": {
+    "cwd": "/Users/name/projects/app"
+  }
+}
+```
+
+### Response
+
+```json
+{
+  "ok": true,
+  "result": {
+    "window_id": "550e8400-e29b-41d4-a716-446655440000",
+    "window_ref": "w1",
+    "workspace_id": "750e8400-e29b-41d4-a716-446655440003",
+    "workspace_ref": "ws3"
+  }
+}
+```
+
+## Implementation
+
+Source: `Sources/TerminalController.swift:2366`
+
+- Creates workspace via `TabManager.addWorkspace(workingDirectory:select:)`
+- Debug builds log creation timing
+- Thread-safe via `v2MainSync`

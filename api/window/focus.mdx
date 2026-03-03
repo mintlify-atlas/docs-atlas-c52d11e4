@@ -1,0 +1,225 @@
+---
+title: window.focus
+description: Focus a specific application window
+---
+
+## Overview
+
+Brings the specified window to the front and makes it the key (focused) window.
+
+<Note>
+  This is a **focus-intent command** that is allowed to mutate application focus state.
+</Note>
+
+## Request Format
+
+### JSON-RPC
+
+```json
+{
+  "id": "<request-id>",
+  "method": "window.focus",
+  "params": {
+    "window_id": "<window-uuid>"
+  }
+}
+```
+
+## Parameters
+
+<ParamField name="window_id" type="string" required>
+  UUID of the window to focus. Can be obtained from [window.list](/api/window/list) or [window.create](/api/window/create).
+</ParamField>
+
+## Response
+
+### Success Response
+
+<ResponseField name="ok" type="boolean" required>
+  Always `true` for successful responses
+</ResponseField>
+
+<ResponseField name="result" type="object" required>
+  <Expandable title="properties">
+    <ResponseField name="window_id" type="string" required>
+      UUID of the focused window
+    </ResponseField>
+    <ResponseField name="window_ref" type="string" required>
+      Human-readable reference in format `window:N`
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Success Response
+
+```json
+{
+  "ok": true,
+  "result": {
+    "window_id": "A1B2C3D4-E5F6-7890-ABCD-EF1234567890",
+    "window_ref": "window:0"
+  }
+}
+```
+
+### Error Response
+
+<ResponseField name="ok" type="boolean" required>
+  Always `false` for error responses
+</ResponseField>
+
+<ResponseField name="error" type="object" required>
+  <Expandable title="properties">
+    <ResponseField name="code" type="string" required>
+      Error code identifying the failure reason
+    </ResponseField>
+    <ResponseField name="message" type="string" required>
+      Human-readable error description
+    </ResponseField>
+    <ResponseField name="data" type="object | null">
+      Additional error context including the requested window_id
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Error Response
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "not_found",
+    "message": "Window not found",
+    "data": {
+      "window_id": "INVALID-UUID",
+      "window_ref": null
+    }
+  }
+}
+```
+
+## Error Codes
+
+<ParamField name="invalid_params" type="error">
+  Missing or invalid `window_id` parameter
+</ParamField>
+
+<ParamField name="not_found" type="error">
+  The specified window does not exist
+</ParamField>
+
+## Usage Examples
+
+### CLI
+
+```bash
+# Focus a window by ID
+cmux focus-window --window A1B2C3D4-E5F6-7890-ABCD-EF1234567890
+
+# Focus a window by reference
+cmux focus-window --window window:0
+
+# Get first window and focus it
+WINDOW_ID=$(cmux list-windows --json | jq -r '.windows[0].id')
+cmux focus-window --window $WINDOW_ID
+```
+
+### Python
+
+```python
+import json
+import socket
+
+def focus_window(window_id: str, socket_path="/tmp/cmux.sock"):
+    request = {
+        "id": "req-1",
+        "method": "window.focus",
+        "params": {
+            "window_id": window_id
+        }
+    }
+    
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+        sock.connect(socket_path)
+        sock.sendall((json.dumps(request) + "\n").encode())
+        response = json.loads(sock.recv(8192).decode().strip())
+        
+    if response["ok"]:
+        print(f"Focused window {response['result']['window_ref']}")
+        return True
+    else:
+        error = response["error"]
+        print(f"Error: {error['code']}: {error['message']}")
+        return False
+
+# Focus a specific window
+focus_window("A1B2C3D4-E5F6-7890-ABCD-EF1234567890")
+```
+
+### Swift
+
+```swift
+let windowId = "A1B2C3D4-E5F6-7890-ABCD-EF1234567890"
+let params: [String: Any] = ["window_id": windowId]
+
+do {
+    let response = try client.sendV2(method: "window.focus", params: params)
+    if let windowRef = response["window_ref"] as? String {
+        print("Focused window \(windowRef)")
+    }
+} catch {
+    print("Failed to focus window: \(error)")
+}
+```
+
+### JavaScript (Node.js)
+
+```javascript
+const net = require('net');
+
+function focusWindow(windowId, socketPath = '/tmp/cmux.sock') {
+  return new Promise((resolve, reject) => {
+    const client = net.createConnection(socketPath);
+    
+    const request = {
+      id: 'req-1',
+      method: 'window.focus',
+      params: { window_id: windowId }
+    };
+    
+    client.on('connect', () => {
+      client.write(JSON.stringify(request) + '\n');
+    });
+    
+    client.on('data', (data) => {
+      const response = JSON.parse(data.toString().trim());
+      client.end();
+      
+      if (response.ok) {
+        resolve(response.result);
+      } else {
+        reject(new Error(`${response.error.code}: ${response.error.message}`));
+      }
+    });
+    
+    client.on('error', reject);
+  });
+}
+
+focusWindow('A1B2C3D4-E5F6-7890-ABCD-EF1234567890')
+  .then(result => console.log(`Focused ${result.window_ref}`))
+  .catch(err => console.error(err.message));
+```
+
+## Behavior Notes
+
+- This command **does bring the window to the front** and activates the application
+- After focusing a window, subsequent commands without an explicit window target will route to the newly focused window
+- If the window has a selected workspace, that workspace becomes the active routing context
+- The `--window` CLI flag can be used to target a different window for subsequent commands without changing focus
+
+## Related Methods
+
+- [window.list](/api/window/list) - Get available window IDs and current focus
+- [window.create](/api/window/create) - Create a new window
+- [workspace.select](/api/workspace/select) - Select a workspace within the focused window

@@ -1,0 +1,152 @@
+---
+title: pane.surfaces
+description: List surfaces within a pane
+---
+
+## Overview
+
+Lists all surfaces contained within a specific pane, showing their IDs, titles, and selection state.
+
+## Method
+
+```
+pane.surfaces
+```
+
+## Parameters
+
+<ParamField path="pane_id" type="string">
+  The ID or reference of the pane to list surfaces from. If omitted, uses the current pane.
+</ParamField>
+
+<ParamField path="workspace_id" type="string">
+  The ID of the workspace containing the pane. If omitted, uses the current workspace.
+</ParamField>
+
+## Response
+
+<ResponseField name="surfaces" type="array">
+  Array of surface objects in the pane.
+  
+  <Expandable title="Surface Object">
+    <ResponseField name="surface_id" type="string">
+      The unique identifier for the surface
+    </ResponseField>
+    
+    <ResponseField name="surface_ref" type="string">
+      Human-readable reference (e.g., "s1", "s2")
+    </ResponseField>
+    
+    <ResponseField name="title" type="string">
+      The title of the surface (e.g., terminal working directory or browser page title)
+    </ResponseField>
+    
+    <ResponseField name="type" type="string">
+      The type of surface: "terminal" or "browser"
+    </ResponseField>
+    
+    <ResponseField name="selected" type="boolean">
+      Whether this surface is currently selected/active in the pane
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## CLI Usage
+
+```bash
+# List surfaces in current pane
+cmux list-pane-surfaces
+
+# List surfaces in specific pane
+cmux list-pane-surfaces --pane p2
+
+# List surfaces in pane within specific workspace
+cmux list-pane-surfaces --workspace ws1 --pane p1
+
+# JSON output
+cmux list-pane-surfaces --pane p2 --json
+```
+
+## CLI Output Example
+
+```
+* s1  ~/projects/myapp  [selected]
+  s2  ~/projects/docs
+  s3  https://example.com
+```
+
+The asterisk (*) indicates the currently selected surface in the pane.
+
+## JSON Response Example
+
+```json
+{
+  "surfaces": [
+    {
+      "surface_id": "550e8400-e29b-41d4-a716-446655440010",
+      "surface_ref": "s1",
+      "title": "~/projects/myapp",
+      "type": "terminal",
+      "selected": true
+    },
+    {
+      "surface_id": "550e8400-e29b-41d4-a716-446655440011",
+      "surface_ref": "s2",
+      "title": "~/projects/docs",
+      "type": "terminal",
+      "selected": false
+    },
+    {
+      "surface_id": "550e8400-e29b-41d4-a716-446655440012",
+      "surface_ref": "s3",
+      "title": "https://example.com",
+      "type": "browser",
+      "selected": false
+    }
+  ]
+}
+```
+
+## Understanding Surface Count
+
+The `surface_count` field in [pane.list](/api/pane/list) shows how many surfaces are in each pane:
+
+```bash
+# List panes with surface counts
+cmux list-panes
+```
+
+Output:
+```
+* p1  [3 surfaces]  [focused]
+  p2  [1 surface]
+  p3  [2 surfaces]
+```
+
+Use `pane.surfaces` to see the details of each surface within a pane.
+
+## Pane Hierarchy Example
+
+```
+Workspace: ws1
+├── Pane 1 (focused)
+│   ├── Surface 1 (terminal) [selected]
+│   ├── Surface 2 (terminal)
+│   └── Surface 3 (browser)
+├── Pane 2
+│   └── Surface 4 (terminal) [selected]
+└── Pane 3
+    ├── Surface 5 (terminal) [selected]
+    └── Surface 6 (terminal)
+```
+
+Each pane maintains its own selected surface. When a pane is focused, its selected surface becomes active.
+
+## Related Methods
+
+- [pane.list](/api/pane/list) - List all panes and see surface counts
+- [pane.create](/api/pane/create) - Create a new pane
+- [pane.focus](/api/pane/focus) - Focus a specific pane
+- [surface.list](/api/surface/list) - List all surfaces across the workspace
+- [surface.create](/api/surface/create) - Create a new surface in a pane
+- [surface.focus](/api/surface/focus) - Focus a specific surface

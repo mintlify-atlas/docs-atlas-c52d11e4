@@ -1,0 +1,153 @@
+---
+title: new-workspace
+description: Create a new workspace with optional directory and command
+---
+
+## Syntax
+
+```bash
+cmux new-workspace [--cwd <path>] [--command <text>]
+```
+
+## Description
+
+Creates a new workspace (tab) in the current window. Optionally sets the working directory and executes a command after the shell initializes.
+
+## Options
+
+| Flag | Description |
+|------|-------------|
+| `--cwd <path>` | Set the working directory for the new workspace (supports `~` and relative paths) |
+| `--command <text>` | Execute this command after the shell starts (automatically appends newline) |
+| `--window <id>` | Create workspace in a specific window (must appear before the command) |
+
+## Output Format
+
+Returns the workspace ID in the format:
+
+```
+OK workspace:N
+```
+
+Where `N` is the workspace's short reference number.
+
+## Path Resolution
+
+The `--cwd` flag supports:
+- Absolute paths: `/Users/name/project`
+- Home directory expansion: `~/Documents`
+- Relative paths: `../sibling-directory`
+
+Relative paths are resolved from the CLI's current working directory, not from any existing workspace.
+
+## Command Execution
+
+When `--command` is provided:
+1. The workspace is created
+2. A 500ms delay ensures the shell has initialized
+3. The command is sent to the workspace with a newline appended
+4. The command executes in the shell
+
+The command text supports escape sequences (e.g., `\n` for additional newlines).
+
+## Environment Variables
+
+None. New workspaces are always created in the currently focused window unless `--window` is specified.
+
+## Examples
+
+### Create a basic workspace
+
+```bash
+cmux new-workspace
+# Output: OK workspace:3
+```
+
+### Create workspace in a specific directory
+
+```bash
+cmux new-workspace --cwd ~/projects/my-app
+```
+
+### Create workspace with absolute path
+
+```bash
+cmux new-workspace --cwd /Users/name/Documents/code
+```
+
+### Create workspace and run a command
+
+```bash
+cmux new-workspace --command "npm run dev"
+```
+
+### Create workspace with directory and command
+
+```bash
+cmux new-workspace --cwd ~/projects/api --command "make watch"
+```
+
+### Create workspace in a different window
+
+```bash
+cmux --window window:2 new-workspace --cwd ~/code
+```
+
+### Create and store the workspace ID
+
+```bash
+WS=$(cmux new-workspace --cwd ~/project | awk '{print $2}')
+echo "Created: $WS"
+cmux --workspace $WS send "echo 'Hello from workspace'"
+```
+
+### Launch multiple dev servers
+
+```bash
+# Frontend
+cmux new-workspace --cwd ~/app/frontend --command "npm run dev"
+
+# Backend
+cmux new-workspace --cwd ~/app/backend --command "cargo run"
+
+# Database
+cmux new-workspace --cwd ~/app --command "docker-compose up"
+```
+
+### Create workspace with complex command
+
+```bash
+# Multiple commands using shell operators
+cmux new-workspace --cwd ~/project --command "source venv/bin/activate && python app.py"
+```
+
+### Quick project launcher
+
+```bash
+#!/bin/bash
+# launch-project.sh
+PROJECT_DIR="$1"
+
+if [ -z "$PROJECT_DIR" ]; then
+  echo "Usage: $0 <project-directory>"
+  exit 1
+fi
+
+WS=$(cmux new-workspace --cwd "$PROJECT_DIR" | awk '{print $2}')
+echo "Launched workspace $WS for $PROJECT_DIR"
+```
+
+## Notes
+
+- The workspace is automatically focused after creation
+- If `--command` is used, there's a built-in 500ms delay to allow shell initialization
+- Commands are executed as if typed at the prompt (they go through your shell's history)
+- The workspace inherits default shell settings from cmux preferences
+
+## Related Commands
+
+- [list-workspaces](/cli/workspaces/list) - View all workspaces
+- [select-workspace](/cli/workspaces/select) - Switch to a workspace
+- [close-workspace](/cli/workspaces/close) - Close a workspace
+- [rename-workspace](/cli/workspaces/rename) - Set workspace title
+- [send-text](/api/surface/send-text) - Send text to a workspace surface

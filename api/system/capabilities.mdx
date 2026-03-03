@@ -1,0 +1,455 @@
+---
+title: system.capabilities
+description: Query supported socket methods and system features
+---
+
+The `system.capabilities` method returns information about the features and API methods supported by the running cmux instance. Use this for feature detection and version compatibility checks.
+
+## Request Format
+
+```json
+{
+  "id": "caps-1",
+  "method": "system.capabilities",
+  "params": {}
+}
+```
+
+## Parameters
+
+This method takes no parameters.
+
+## Response Format
+
+### Success Response
+
+```json
+{
+  "id": "caps-1",
+  "ok": true,
+  "result": {
+    "protocol": "cmux-socket",
+    "version": 2,
+    "socket_path": "/tmp/cmux.sock",
+    "access_mode": "allowAll",
+    "methods": [
+      "system.ping",
+      "system.capabilities",
+      "system.identify",
+      "system.tree",
+      "window.list",
+      "workspace.create",
+      "workspace.list",
+      "surface.create",
+      "surface.send_text",
+      "browser.navigate",
+      "browser.click"
+    ]
+  }
+}
+```
+
+## Response Fields
+
+<ResponseField name="protocol" type="string" required>
+  Protocol name, always `"cmux-socket"`
+</ResponseField>
+
+<ResponseField name="version" type="number" required>
+  Socket protocol version number (currently `2`)
+</ResponseField>
+
+<ResponseField name="socket_path" type="string" required>
+  Path to the Unix socket used for this connection
+</ResponseField>
+
+<ResponseField name="access_mode" type="string" required>
+  Current socket access mode:
+  - `"cmuxOnly"` - Only cmux CLI can connect
+  - `"allowAll"` - Any process can connect
+  - `"off"` - Socket disabled
+</ResponseField>
+
+<ResponseField name="methods" type="array" required>
+  Sorted array of all supported v2 socket method names. Check this list to determine if a specific method is available before calling it.
+</ResponseField>
+
+## Error Codes
+
+This method typically does not return errors. If the socket is unavailable, you'll get a connection error instead.
+
+| Code | Description |
+|------|-------------|
+| `connection_refused` | Socket not available or access denied |
+
+## Examples
+
+### Basic Capabilities Query
+
+```bash
+# Via CLI
+cmux capabilities
+```
+
+```json
+// Via socket
+{"id":"1","method":"system.capabilities","params":{}}
+```
+
+### Check for Specific Method
+
+```python
+import socket
+import json
+
+def has_method(method_name, socket_path="/tmp/cmux.sock"):
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.connect(socket_path)
+    
+    request = {
+        "id": "caps",
+        "method": "system.capabilities",
+        "params": {}
+    }
+    
+    sock.sendall(json.dumps(request).encode() + b"\n")
+    response = sock.recv(8192).decode().strip()
+    sock.close()
+    
+    data = json.loads(response)
+    methods = data.get("result", {}).get("methods", [])
+    return method_name in methods
+
+if has_method("browser.navigate"):
+    print("Browser automation is supported")
+else:
+    print("Browser automation not available")
+```
+
+### Python Example with Full Response
+
+```python
+import socket
+import json
+
+def get_capabilities(socket_path="/tmp/cmux.sock"):
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.connect(socket_path)
+    
+    request = {
+        "id": "caps",
+        "method": "system.capabilities",
+        "params": {}
+    }
+    
+    sock.sendall(json.dumps(request).encode() + b"\n")
+    response = sock.recv(8192).decode().strip()
+    sock.close()
+    
+    return json.loads(response)
+
+result = get_capabilities()
+caps = result["result"]
+
+print(f"Protocol: {caps['protocol']} v{caps['version']}")
+print(f"Socket: {caps['socket_path']}")
+print(f"Access mode: {caps['access_mode']}")
+print(f"\nSupported methods ({len(caps['methods'])}):")
+for method in caps["methods"]:
+    print(f"  - {method}")
+```
+
+### Node.js Example
+
+```javascript
+const net = require('net');
+
+function getCapabilities(socketPath = '/tmp/cmux.sock') {
+  return new Promise((resolve, reject) => {
+    const client = net.createConnection(socketPath);
+    
+    const request = {
+      id: 'caps',
+      method: 'system.capabilities',
+      params: {}
+    };
+    
+    client.on('connect', () => {
+      client.write(JSON.stringify(request) + '\n');
+    });
+    
+    client.on('data', (data) => {
+      const response = JSON.parse(data.toString().trim());
+      client.end();
+      resolve(response);
+    });
+    
+    client.on('error', reject);
+  });
+}
+
+getCapabilities().then(result => {
+  const caps = result.result;
+  console.log(`Protocol: ${caps.protocol} v${caps.version}`);
+  console.log(`Supported methods: ${caps.methods.length}`);
+  
+  // Check for specific capabilities
+  const hasBrowser = caps.methods.some(m => m.startsWith('browser.'));
+  console.log(`Browser support: ${hasBrowser}`);
+});
+```
+
+### Bash Example - Feature Detection
+
+```bash
+#!/bin/bash
+
+# Check if system.tree is supported
+CAPABILITIES=$(cmux capabilities)
+
+if echo "$CAPABILITIES" | jq -e '.methods[] | select(. == "system.tree")' > /dev/null; then
+  echo "Using system.tree for layout discovery"
+  LAYOUT=$(cmux tree --json)
+else
+  echo "system.tree not available, using fallback"
+  WORKSPACES=$(cmux list-workspaces --json)
+fi
+```
+
+## Use Cases
+
+### Version Compatibility Check
+
+Ensure the cmux version supports required features:
+
+```python
+import socket
+import json
+import sys
+
+def check_required_methods(required, socket_path="/tmp/cmux.sock"):
+    """Verify all required methods are supported."""
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.connect(socket_path)
+    
+    request = json.dumps({
+        "id": "caps",
+        "method": "system.capabilities",
+        "params": {}
+    }) + "\n"
+    
+    sock.sendall(request.encode())
+    response = json.loads(sock.recv(8192).decode().strip())
+    sock.close()
+    
+    methods = set(response["result"]["methods"])
+    missing = [m for m in required if m not in methods]
+    
+    if missing:
+        print(f"Error: Missing required methods: {', '.join(missing)}")
+        print("Please upgrade cmux to use this script.")
+        sys.exit(1)
+
+# Required methods for this script
+REQUIRED = [
+    "system.identify",
+    "workspace.create",
+    "surface.send_text",
+    "browser.navigate"
+]
+
+check_required_methods(REQUIRED)
+print("All required methods available")
+```
+
+### Dynamic API Selection
+
+Choose between API versions based on availability:
+
+```javascript
+const { execSync } = require('child_process');
+
+function getAvailableAPI() {
+  const caps = JSON.parse(execSync('cmux capabilities').toString());
+  const methods = caps.methods;
+  
+  // Prefer newer APIs when available
+  if (methods.includes('browser.eval')) {
+    return 'browser.eval';  // v2 API
+  } else if (methods.includes('browser.navigate')) {
+    return 'browser.navigate';  // v1 API
+  } else {
+    throw new Error('Browser automation not supported');
+  }
+}
+
+const api = getAvailableAPI();
+console.log(`Using ${api} for browser automation`);
+```
+
+### Access Mode Detection
+
+```python
+import socket
+import json
+
+def is_socket_accessible(socket_path="/tmp/cmux.sock"):
+    """Check if socket is accessible and mode allows connections."""
+    try:
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock.connect(socket_path)
+        
+        request = json.dumps({
+            "id": "caps",
+            "method": "system.capabilities",
+            "params": {}
+        }) + "\n"
+        
+        sock.sendall(request.encode())
+        response = json.loads(sock.recv(8192).decode().strip())
+        sock.close()
+        
+        access_mode = response["result"]["access_mode"]
+        
+        if access_mode == "off":
+            print("Socket is disabled")
+            return False
+        elif access_mode == "cmuxOnly":
+            print("Socket only accepts cmux CLI connections")
+            return False
+        elif access_mode == "allowAll":
+            print("Socket accepts all connections")
+            return True
+            
+    except Exception as e:
+        print(f"Socket not accessible: {e}")
+        return False
+
+if is_socket_accessible():
+    # Proceed with automation
+    pass
+```
+
+### CI/CD Feature Matrix
+
+Build a feature matrix for testing:
+
+```python
+import socket
+import json
+
+def get_feature_matrix(socket_path="/tmp/cmux.sock"):
+    """Build feature support matrix."""
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.connect(socket_path)
+    
+    request = json.dumps({
+        "id": "caps",
+        "method": "system.capabilities",
+        "params": {}
+    }) + "\n"
+    
+    sock.sendall(request.encode())
+    response = json.loads(sock.recv(8192).decode().strip())
+    sock.close()
+    
+    methods = response["result"]["methods"]
+    
+    features = {
+        "system": any(m.startswith("system.") for m in methods),
+        "windows": any(m.startswith("window.") for m in methods),
+        "workspaces": any(m.startswith("workspace.") for m in methods),
+        "surfaces": any(m.startswith("surface.") for m in methods),
+        "panes": any(m.startswith("pane.") for m in methods),
+        "browser": any(m.startswith("browser.") for m in methods),
+        "notifications": any(m.startswith("notification.") for m in methods),
+    }
+    
+    return features
+
+features = get_feature_matrix()
+for category, supported in features.items():
+    status = "✓" if supported else "✗"
+    print(f"{status} {category.capitalize()}")
+```
+
+## Method Categories
+
+The `methods` array typically includes methods from these categories:
+
+### System Methods
+- `system.ping` - Test connectivity
+- `system.capabilities` - This method
+- `system.identify` - Get context information
+- `system.tree` - Full window/workspace hierarchy
+
+### Window Methods
+- `window.list` - List all windows
+- `window.current` - Get current window
+- `window.focus` - Focus a window
+- `window.create` - Create new window
+- `window.close` - Close a window
+
+### Workspace Methods
+- `workspace.list` - List workspaces
+- `workspace.create` - Create workspace
+- `workspace.select` - Switch workspace
+- `workspace.close` - Close workspace
+- `workspace.rename` - Rename workspace
+
+### Surface Methods
+- `surface.list` - List surfaces
+- `surface.create` - Create surface
+- `surface.focus` - Focus surface
+- `surface.close` - Close surface
+- `surface.send_text` - Send text input
+- `surface.send_key` - Send key event
+- `surface.read_text` - Read terminal text
+
+### Pane Methods
+- `pane.list` - List panes
+- `pane.create` - Create pane
+- `pane.focus` - Focus pane
+- `pane.resize` - Resize pane
+- `pane.swap` - Swap panes
+
+### Browser Methods
+- `browser.navigate` - Navigate to URL
+- `browser.click` - Click element
+- `browser.type` - Type text
+- `browser.eval` - Execute JavaScript
+- `browser.screenshot` - Take screenshot
+- `browser.wait` - Wait for element
+
+### Notification Methods
+- `notification.create` - Create notification
+- `notification.list` - List notifications
+- `notification.clear` - Clear notifications
+
+## Implementation Notes
+
+From `Sources/TerminalController.swift:1564-1748`:
+
+- Returns a static list of all supported v2 methods
+- Methods list is sorted alphabetically for consistent output
+- Debug-only methods (e.g., `debug.*`) are included only in DEBUG builds
+- Access mode reflects the current socket security configuration
+- No authentication required (even in restricted modes)
+- Response is lightweight and cacheable
+
+## Access Modes
+
+### `cmuxOnly`
+Only the cmux CLI can connect. Authentication is based on socket file ownership. Third-party scripts cannot connect directly.
+
+### `allowAll`
+Any process can connect and call methods. Suitable for automation, CI/CD, and agent frameworks.
+
+### `off`
+Socket is completely disabled. The capabilities method itself won't be reachable.
+
+## Related Methods
+
+- [system.ping](/api/system/ping) - Test socket connectivity
+- [system.identify](/api/system/identify) - Get current context
+- [System Tree](/cli/system/tree) - View full hierarchy

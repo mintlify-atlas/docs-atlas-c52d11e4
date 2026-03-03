@@ -1,0 +1,227 @@
+---
+title: "List Notifications"
+description: "List all notifications in cmux"
+---
+
+The `list-notifications` command retrieves all notifications currently stored in cmux.
+
+## Syntax
+
+```bash
+cmux list-notifications [--json]
+```
+
+## Options
+
+<ParamField path="--json" type="boolean">
+  Output notifications as JSON array instead of plain text
+</ParamField>
+
+## Output Format
+
+### Plain Text
+
+Default output format shows notifications in a human-readable list:
+
+```
+<id> <workspace_id> <surface_id> [read/unread] <title> - <subtitle> - <body>
+```
+
+### JSON Format
+
+When `--json` flag is used, outputs an array of notification objects:
+
+```json
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "workspace_id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+    "surface_id": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+    "is_read": false,
+    "title": "Build Complete",
+    "subtitle": "Success",
+    "body": "All tests passed"
+  },
+  {
+    "id": "660f9511-f3ac-52e5-b827-557766551111",
+    "workspace_id": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+    "surface_id": null,
+    "is_read": true,
+    "title": "Claude Code",
+    "subtitle": "Permission",
+    "body": "Approval needed"
+  }
+]
+```
+
+## Examples
+
+### Basic Usage
+
+```bash
+# List all notifications
+cmux list-notifications
+
+# Get JSON output for parsing
+cmux list-notifications --json
+```
+
+### Parse JSON Output
+
+```bash
+# Count unread notifications
+cmux list-notifications --json | jq '[.[] | select(.is_read == false)] | length'
+
+# Get notification titles
+cmux list-notifications --json | jq -r '.[].title'
+
+# Filter by workspace
+cmux list-notifications --json | jq --arg ws "$CMUX_WORKSPACE_ID" '.[] | select(.workspace_id == $ws)'
+
+# Show only unread notifications
+cmux list-notifications --json | jq '.[] | select(.is_read == false) | .title + ": " + .body'
+```
+
+### From Python
+
+```python
+import json
+import subprocess
+
+def list_notifications():
+    """Get all notifications as list of dicts."""
+    result = subprocess.run(
+        ["cmux", "list-notifications", "--json"],
+        capture_output=True,
+        text=True
+    )
+    if result.returncode == 0:
+        return json.loads(result.stdout)
+    return []
+
+# Usage
+notifications = list_notifications()
+for notif in notifications:
+    if not notif["is_read"]:
+        print(f"{notif['title']}: {notif['body']}")
+```
+
+### Shell Script Example
+
+```bash
+#!/bin/bash
+# Check for unread notifications on startup
+
+if command -v cmux &>/dev/null; then
+    UNREAD=$(cmux list-notifications --json | jq '[.[] | select(.is_read == false)] | length')
+    if [ "$UNREAD" -gt 0 ]; then
+        echo "You have $UNREAD unread notification(s)"
+        cmux list-notifications --json | jq -r '.[] | select(.is_read == false) | "  - \(.title): \(.body)"'
+    fi
+fi
+```
+
+## JSON Schema
+
+Each notification object has the following structure:
+
+<ResponseField name="id" type="string" required>
+  Unique notification identifier (UUID)
+</ResponseField>
+
+<ResponseField name="workspace_id" type="string" required>
+  ID of the workspace associated with this notification
+</ResponseField>
+
+<ResponseField name="surface_id" type="string | null">
+  ID of the surface/panel associated with this notification, or `null` if none
+</ResponseField>
+
+<ResponseField name="is_read" type="boolean" required>
+  Whether the notification has been read
+</ResponseField>
+
+<ResponseField name="title" type="string" required>
+  Notification title
+</ResponseField>
+
+<ResponseField name="subtitle" type="string" required>
+  Notification subtitle (may be empty string)
+</ResponseField>
+
+<ResponseField name="body" type="string" required>
+  Notification body text (may be empty string)
+</ResponseField>
+
+## Implementation Details
+
+### Protocol
+
+The `list-notifications` command sends a v1 socket command:
+
+```
+list_notifications
+```
+
+The server returns notifications in a text format that the CLI parses into JSON when `--json` flag is used.
+
+From `CLI/cmux.swift:1286-1305`:
+
+```swift
+case "list-notifications":
+    let response = try sendV1Command("list_notifications", client: client)
+    if jsonOutput {
+        let notifications = parseNotifications(response)
+        let payload = notifications.map { item in
+            var dict: [String: Any] = [
+                "id": item.id,
+                "workspace_id": item.workspaceId,
+                "is_read": item.isRead,
+                "title": item.title,
+                "subtitle": item.subtitle,
+                "body": item.body
+            ]
+            dict["surface_id"] = item.surfaceId ?? NSNull()
+            return dict
+        }
+        print(jsonString(payload))
+    } else {
+        print(response)
+    }
+```
+
+### NotificationInfo Struct
+
+From `CLI/cmux.swift:197-206`:
+
+```swift
+struct NotificationInfo {
+    let id: String
+    let workspaceId: String
+    let surfaceId: String?
+    let isRead: Bool
+    let title: String
+    let subtitle: String
+    let body: String
+}
+```
+
+## Use Cases
+
+- **Monitor agent activity** - Check what notifications AI agents have sent
+- **Build dashboards** - Parse JSON to create notification summaries
+- **Audit trails** - Review notification history for debugging
+- **Automation scripts** - Trigger actions based on notification content
+- **Integration testing** - Verify notifications were sent correctly
+
+## Best Practices
+
+1. **Use `--json` for scripting** - Easier to parse programmatically
+2. **Filter with jq** - Leverage jq for powerful JSON queries
+3. **Check return codes** - Handle errors gracefully
+4. **Cache results** - Avoid excessive socket calls in tight loops
+
+## Related Commands
+
+- [notify](/cli/notifications/send) - Send a notification
+- [clear-notifications](/cli/notifications/clear) - Clear all notifications

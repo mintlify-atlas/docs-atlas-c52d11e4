@@ -1,0 +1,179 @@
+---
+title: Vertical Tabs
+description: Sidebar with git branch, PR status, working directory, ports, and notification text
+---
+
+The vertical tabs sidebar in cmux displays rich metadata for each workspace, making it easy to see the status of all your terminals at a glance.
+
+<Frame>
+  <img src="/images/vertical-horizontal-tabs-and-splits.png" alt="Vertical tabs in sidebar" />
+</Frame>
+
+## Sidebar Information
+
+Each workspace entry in the sidebar shows:
+
+<CardGroup cols={2}>
+  <Card title="Git Branch" icon="code-branch">
+    Current branch of the working directory
+  </Card>
+  <Card title="PR Status" icon="code-pull-request">
+    Linked pull request number and status
+  </Card>
+  <Card title="Working Directory" icon="folder">
+    Current directory path
+  </Card>
+  <Card title="Listening Ports" icon="network-wired">
+    Active server ports (e.g., dev servers)
+  </Card>
+  <Card title="Notification Text" icon="bell">
+    Latest notification message from agents
+  </Card>
+  <Card title="Unread Indicator" icon="circle">
+    Visual highlight when workspace has unread notifications
+  </Card>
+</CardGroup>
+
+## Toggling the Sidebar
+
+Show or hide the vertical tabs sidebar:
+
+```bash
+Cmd+B
+```
+
+<Tip>
+The sidebar state is preserved across app restarts, so cmux remembers your preference.
+</Tip>
+
+## Workspace Selection
+
+Click any workspace in the sidebar to switch to it instantly. The currently active workspace is highlighted.
+
+You can also use keyboard shortcuts:
+
+| Shortcut | Action |
+|----------|--------|
+| `Cmd+1`–`Cmd+8` | Jump to workspace 1–8 |
+| `Cmd+9` | Jump to last workspace |
+| `Ctrl+Cmd+]` | Next workspace |
+| `Ctrl+Cmd+[` | Previous workspace |
+
+## Git Integration
+
+The sidebar automatically detects git repositories and displays:
+
+- **Current branch name** - Updated when you switch branches
+- **Pull request status** - Shows PR number if branch is linked to a PR
+- **Repository status** - Visual indicators for changes
+
+<Note>
+Git information updates automatically as you work in the terminal. No manual refresh needed.
+</Note>
+
+## Port Detection
+
+When you run development servers or other services that listen on ports, cmux automatically detects and displays them in the sidebar:
+
+```bash
+# Example: Run a dev server
+npm run dev
+# Listening on http://localhost:3000
+```
+
+The sidebar will show:
+- `3000` - HTTP development server
+
+This makes it easy to:
+- See which workspaces have active servers
+- Quickly identify port numbers without searching terminal output
+- Avoid port conflicts across workspaces
+
+## Notification Indicators
+
+When an AI coding agent sends a notification, the workspace tab in the sidebar:
+
+1. **Lights up** with a visual indicator
+2. **Shows the notification text** in the workspace entry
+3. **Displays a blue ring** around the notification badge
+
+<Frame>
+  <img src="/images/sidebar-notification-badge.png" alt="Sidebar notification badge" />
+</Frame>
+
+Use `Cmd+Shift+U` to jump to the most recent unread notification.
+
+## Horizontal Tabs
+
+Within each workspace, you can have multiple **surfaces** (horizontal tabs) in each split pane:
+
+| Shortcut | Action |
+|----------|--------|
+| `Cmd+T` | New surface (tab within pane) |
+| `Cmd+Shift+]` | Next surface |
+| `Cmd+Shift+[` | Previous surface |
+| `Ctrl+Tab` | Next surface |
+| `Ctrl+Shift+Tab` | Previous surface |
+| `Ctrl+1`–`Ctrl+8` | Jump to surface 1–8 |
+| `Ctrl+9` | Jump to last surface |
+| `Cmd+W` | Close surface |
+
+<Info>
+Surfaces are tabs **within** a pane, while workspaces are top-level tabs in the sidebar. This two-level hierarchy lets you organize complex terminal setups efficiently.
+</Info>
+
+## Drag and Reorder
+
+You can drag workspace tabs in the sidebar to reorder them. This is useful for organizing workspaces by project or priority.
+
+```bash
+# Via CLI
+cmux workspace reorder <workspace-id> --before <other-workspace-id>
+cmux workspace reorder <workspace-id> --after <other-workspace-id>
+```
+
+## Working Directory Display
+
+The sidebar shows the current working directory for each workspace. This updates automatically when you:
+
+- `cd` to a different directory
+- Open a new shell in a different location
+- Create a new split pane in a specific directory
+
+The path is shortened to fit the sidebar width:
+- `~/projects/my-app` → `~/p/my-app`
+- Long paths show the most relevant parts
+
+## Context at a Glance
+
+The vertical tabs sidebar is designed to give you **context at a glance** across all your workspaces:
+
+<Steps>
+  <Step title="Project Context">
+    See git branch and working directory to identify the project
+  </Step>
+  <Step title="Server Status">
+    Check which dev servers are running and on which ports
+  </Step>
+  <Step title="PR Tracking">
+    Monitor linked pull requests without leaving the terminal
+  </Step>
+  <Step title="Agent Notifications">
+    Instantly see which agents need your attention
+  </Step>
+</Steps>
+
+## Customization
+
+Sidebar appearance can be customized through cmux settings:
+
+- Sidebar width
+- Font size for metadata
+- Color theme for indicators
+- Show/hide specific metadata fields
+
+<Card title="Related" icon="link">
+  - [Workspaces](/features/workspaces) - Managing workspace tabs
+  - [Notifications](/features/notifications) - Notification system integration
+  - [Split Panes](/features/split-panes) - Horizontal tabs within panes
+</Card>

@@ -1,0 +1,100 @@
+---
+title: Installation
+description: Install cmux via DMG or Homebrew on macOS
+---
+
+cmux is available for macOS via direct download or Homebrew. The app auto-updates via Sparkle, so you only need to install once.
+
+## DMG (Recommended)
+
+Download the latest release and drag cmux to your Applications folder.
+
+<Steps>
+  <Step title="Download cmux">
+    Download the latest DMG from the releases page:
+    
+    [Download cmux for macOS](https://github.com/manaflow-ai/cmux/releases/latest/download/cmux-macos.dmg)
+  </Step>
+  
+  <Step title="Install the app">
+    Open the `.dmg` file and drag cmux to your Applications folder.
+  </Step>
+  
+  <Step title="Launch cmux">
+    Open cmux from your Applications folder.
+    
+    <Note>
+      On first launch, macOS may ask you to confirm opening an app from an identified developer. Click **Open** to proceed.
+    </Note>
+  </Step>
+</Steps>
+
+cmux auto-updates via Sparkle, so you'll receive updates automatically without needing to download again.
+
+## Homebrew
+
+Install cmux using Homebrew with the official tap.
+
+<Steps>
+  <Step title="Add the tap">
+    ```bash
+    brew tap manaflow-ai/cmux
+    ```
+  </Step>
+  
+  <Step title="Install cmux">
+    ```bash
+    brew install --cask cmux
+    ```
+  </Step>
+  
+  <Step title="Launch cmux">
+    ```bash
+    open -a cmux
+    ```
+    
+    <Note>
+      On first launch, macOS may ask you to confirm opening an app from an identified developer. Click **Open** to proceed.
+    </Note>
+  </Step>
+</Steps>
+
+### Update cmux
+
+To update cmux to the latest version via Homebrew:
+
+```bash
+brew upgrade --cask cmux
+```
+
+<Note>
+  If you installed via DMG, cmux auto-updates via Sparkle. You don't need to manually update.
+</Note>
+
+## Nightly Builds
+
+For the latest features and fixes from the `main` branch, you can download nightly builds.
+
+<Warning>
+  Nightly builds are unstable and may contain bugs. Use them only if you want to test the latest features.
+</Warning>
+
+[Download cmux NIGHTLY](https://github.com/manaflow-ai/cmux/releases/download/nightly/cmux-nightly-macos.dmg)
+
+cmux NIGHTLY is a separate app with its own bundle ID, so it runs alongside the stable version. It's built automatically from the latest `main` commit and auto-updates via its own Sparkle feed.
+
+## Verify Installation
+
+After installation, verify that the `cmux` CLI is available:
+
+```bash
+cmux --version
+```
+
+You should see output with the version number and commit metadata.
+
+## What's Next?
+
+<Card title="Quick Start" icon="rocket" href="/quickstart">
+  Get your first workspace running with notifications
+</Card>

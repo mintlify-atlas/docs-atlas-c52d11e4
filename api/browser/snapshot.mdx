@@ -1,0 +1,322 @@
+---
+title: browser.snapshot
+description: Capture a DOM snapshot with stable element references
+---
+
+## Method
+
+`browser.snapshot`
+
+## Description
+
+Captures a text-based snapshot of the page DOM with stable element references (`@e1`, `@e2`, etc.). This is the primary method for LLM-friendly page inspection and element targeting.
+
+Snapshots include:
+- Semantic HTML structure with interactive elements annotated
+- Stable refs for clickable, typeable, and actionable elements
+- Current form values and states
+- Accessibility hints (ARIA labels, roles)
+
+## Parameters
+
+<ParamField path="surface_id" type="string" required>
+  Browser surface ID (UUID or ref like `surface:1`)
+</ParamField>
+
+<ParamField path="selector" type="string">
+  CSS selector to limit snapshot to a subtree (defaults to entire page)
+</ParamField>
+
+<ParamField path="interactive" type="boolean">
+  If true, only include interactive elements (links, buttons, inputs)
+</ParamField>
+
+<ParamField path="cursor" type="boolean">
+  If true, mark the currently focused element in the snapshot
+</ParamField>
+
+<ParamField path="compact" type="boolean">
+  If true, minimize whitespace and non-essential text nodes
+</ParamField>
+
+<ParamField path="max_depth" type="integer">
+  Maximum DOM depth to traverse (useful for large pages)
+</ParamField>
+
+## Response
+
+<ResponseField name="ok" type="boolean">
+  Always `true` on success
+</ResponseField>
+
+<ResponseField name="snapshot" type="string">
+  Text-based DOM snapshot with element refs
+</ResponseField>
+
+<ResponseField name="url" type="string">
+  Current page URL
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  Page title
+</ResponseField>
+
+<ResponseField name="refs" type="object">
+  Map of refs to element metadata: `{"@e1": {"tag": "button", "text": "Submit", ...}, ...}`
+</ResponseField>
+
+<ResponseField name="surface_id" type="string">
+  Surface UUID
+</ResponseField>
+
+<ResponseField name="surface_ref" type="string">
+  Surface short ref
+</ResponseField>
+
+## Snapshot Format
+
+Interactive elements are annotated with refs:
+
+```
+Title: Example Login
+URL: https://example.com/login
+
+<form>
+  <label>Email</label>
+  <input @e1 type="email" value="">
+  
+  <label>Password</label>
+  <input @e2 type="password" value="">
+  
+  <button @e3>Log In</button>
+  <a @e4 href="/forgot">Forgot password?</a>
+</form>
+```
+
+Refs can be used directly in other browser methods:
+```bash
+cmux browser surface:1 type @e1 "user@example.com"
+cmux browser surface:1 type @e2 "password123"
+cmux browser surface:1 click @e3
+```
+
+## CLI Usage
+
+```bash
+# Full page snapshot
+cmux browser surface:1 snapshot
+
+# Interactive elements only
+cmux browser surface:1 snapshot --interactive
+
+# Snapshot a specific section
+cmux browser surface:1 snapshot --selector ".main-content"
+
+# Compact format
+cmux browser surface:1 snapshot --compact
+
+# Limit depth for large pages
+cmux browser surface:1 snapshot --max-depth 5
+
+# JSON output with refs map
+cmux browser surface:1 snapshot --json
+```
+
+## Agent-Browser Compatibility
+
+This method corresponds to:
+- `agent-browser snapshot`
+- `agent-browser snapshot --interactive`
+
+**Key differences:**
+- cmux requires explicit surface targeting
+- Ref format is consistent: `@e1`, `@e2`, etc.
+- Refs are scoped per snapshot call (not session-global)
+- Use `browser.find.*` locators for persistent element queries
+
+## Examples
+
+<CodeGroup>
+
+```bash CLI
+# Basic workflow: snapshot -> inspect -> act
+cmux browser surface:1 navigate https://example.com/login
+cmux browser surface:1 snapshot --interactive
+# Output:
+# <input @e1 type="email" ...>
+# <input @e2 type="password" ...>
+# <button @e3>Log In</button>
+
+cmux browser surface:1 type @e1 "user@example.com"
+cmux browser surface:1 type @e2 "password123"
+cmux browser surface:1 click @e3
+```
+
+```python Python
+import json
+import subprocess
+
+def snapshot(surface_id: str, interactive: bool = False) -> dict:
+    cmd = ["cmux", "browser", surface_id, "snapshot", "--json"]
+    if interactive:
+        cmd.append("--interactive")
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    return json.loads(result.stdout)
+
+# Get interactive snapshot
+data = snapshot("surface:1", interactive=True)
+print("Page:", data["title"])
+print("URL:", data["url"])
+print("\nSnapshot:")
+print(data["snapshot"])
+
+# Access refs metadata
+refs = data.get("refs", {})
+for ref, meta in refs.items():
+    if meta.get("tag") == "button":
+        print(f"Button {ref}: {meta.get('text')}")
+```
+
+```javascript JavaScript
+const { execSync } = require('child_process');
+
+function snapshot(surfaceId, options = {}) {
+  const cmd = ['cmux', 'browser', surfaceId, 'snapshot', '--json'];
+  if (options.interactive) cmd.push('--interactive');
+  if (options.selector) cmd.push('--selector', options.selector);
+  
+  const output = execSync(cmd.join(' '), { encoding: 'utf-8' });
+  return JSON.parse(output);
+}
+
+// Capture login form
+const data = snapshot('surface:1', { 
+  interactive: true,
+  selector: 'form'
+});
+
+console.log('Form snapshot:');
+console.log(data.snapshot);
+
+// Find input refs
+const refs = data.refs || {};
+const emailRef = Object.keys(refs).find(r => 
+  refs[r].type === 'email'
+);
+console.log('Email input:', emailRef);
+```
+
+</CodeGroup>
+
+## Element Ref Metadata
+
+The `refs` object contains metadata for each annotated element:
+
+```json
+{
+  "@e1": {
+    "tag": "input",
+    "type": "email",
+    "name": "user_email",
+    "placeholder": "Enter your email",
+    "value": "",
+    "required": true
+  },
+  "@e3": {
+    "tag": "button",
+    "type": "submit",
+    "text": "Log In",
+    "disabled": false
+  },
+  "@e4": {
+    "tag": "a",
+    "href": "/forgot-password",
+    "text": "Forgot password?"
+  }
+}
+```
+
+## Use Cases
+
+### LLM-Guided Automation
+```python
+# 1. Agent inspects page
+snapshot_data = snapshot("surface:1", interactive=True)
+page_context = snapshot_data["snapshot"]
+
+# 2. LLM decides action based on snapshot
+# "I see login form with @e1 (email) and @e2 (password)"
+
+# 3. Execute action with refs
+exec(["cmux", "browser", "surface:1", "type", "@e1", "user@example.com"])
+exec(["cmux", "browser", "surface:1", "type", "@e2", "password"])
+exec(["cmux", "browser", "surface:1", "click", "@e3"])
+```
+
+### Form Inspection
+```bash
+# Get all form fields
+cmux browser surface:1 snapshot --selector "form" --interactive
+```
+
+### Verify Page State
+```bash
+# Check if error messages present
+cmux browser surface:1 snapshot --selector ".errors"
+```
+
+## Filtering Options
+
+### Interactive Mode
+Only includes actionable elements:
+- Links (`<a>`)
+- Buttons (`<button>`, `<input type="submit">`)
+- Form inputs (`<input>`, `<textarea>`, `<select>`)
+- Custom interactive elements with `onclick` or `tabindex`
+
+### Selector Scoping
+```bash
+# Snapshot just the navigation
+cmux browser surface:1 snapshot --selector "nav"
+
+# Snapshot main content only
+cmux browser surface:1 snapshot --selector "main"
+
+# Snapshot error messages
+cmux browser surface:1 snapshot --selector ".alert-error"
+```
+
+### Depth Limiting
+```bash
+# Limit to 3 levels deep (useful for large pages)
+cmux browser surface:1 snapshot --max-depth 3
+```
+
+## Best Practices
+
+1. **Use interactive mode for automation**: Reduces noise and focuses on actionable elements
+2. **Scope with selectors**: Target specific page sections to reduce snapshot size
+3. **Combine with wait**: Ensure page is ready before snapshot
+   ```bash
+   cmux browser surface:1 wait --load-state domcontentloaded
+   cmux browser surface:1 snapshot --interactive
+   ```
+4. **Refs are ephemeral**: They're valid only for the current snapshot. Re-snapshot after page changes
+5. **Use find locators for stability**: For repeated actions, prefer `browser.find.role` over snapshot refs
+
+## Error Codes
+
+| Code | Description |
+|------|-------------|
+| `not_found` | Surface not found or not a browser surface |
+| `invalid_params` | Invalid selector or max_depth |
+| `invalid_state` | Page not loaded or browser not ready |
+| `timeout` | Snapshot generation timed out |
+
+## See Also
+
+- [browser.click](/api/browser/click) - Click elements using refs
+- [browser.type](/api/browser/type) - Type into inputs using refs
+- [browser.wait](/api/browser/wait) - Wait before snapshot
+- [Automation Commands](/cli/browser/automation#find) - Locate elements with stable queries
+- [browser.eval](/api/browser/eval) - Execute JavaScript for custom extraction

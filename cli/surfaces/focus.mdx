@@ -1,0 +1,76 @@
+---
+title: focus-panel
+description: Focus a surface in a workspace
+---
+
+The `focus-panel` command focuses a specific surface (panel) in a workspace.
+
+## Terminology
+
+In cmux, **surface** and **panel** are synonymous terms. The command is named `focus-panel` for historical reasons, but it focuses a surface.
+
+## Usage
+
+```bash
+cmux focus-panel --panel <id|ref|index> [--workspace <id|ref>]
+```
+
+## Options
+
+- `--panel <id|ref|index>` - **Required.** Surface to focus
+- `--workspace <id|ref>` - Target workspace (defaults to `$CMUX_WORKSPACE_ID`)
+- `--json` - Output in JSON format
+- `--id-format <refs|uuids|both>` - ID format for output (default: `refs`)
+
+## Targeting
+
+Surfaces can be targeted by:
+- **UUID** - Full surface ID (e.g., `abc123-...`)
+- **Ref** - Short reference (e.g., `surface:0`, `surface:1`)
+- **Index** - Numeric index within the workspace (0-based)
+
+## Output
+
+### Human-readable format
+
+```
+OK surface=surface:0 pane=pane:1 workspace=workspace:0
+```
+
+### JSON format
+
+```json
+{
+  "surface_ref": "surface:0",
+  "pane_ref": "pane:1",
+  "workspace_ref": "workspace:0"
+}
+```
+
+## Examples
+
+```bash
+# Focus surface by ref
+cmux focus-panel --panel surface:0
+
+# Focus surface by index
+cmux focus-panel --panel 1
+
+# Focus surface in specific workspace
+cmux focus-panel --panel surface:2 --workspace workspace:1
+
+# Focus surface with JSON output
+cmux focus-panel --panel surface:0 --json
+```
+
+## Behavior
+
+- Focuses the specified surface within its pane
+- Also focuses the pane containing the surface
+- Does not change workspace selection unless the surface is in a different workspace
+
+## Related Commands
+
+- [list-panels](/cli/surfaces/list) - List surfaces
+- [focus-pane](/cli/panes/focus) - Focus a pane
+- [new-surface](/cli/surfaces/create) - Create a new surface

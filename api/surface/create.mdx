@@ -1,0 +1,141 @@
+---
+title: surface.create
+description: Create a new surface in a pane
+---
+
+Creates a new surface (terminal or browser panel) in the specified pane.
+
+## Method
+
+```
+surface.create
+```
+
+## Parameters
+
+<ParamField path="workspace_id" type="string">
+  The UUID of the workspace. If not provided, uses the currently selected workspace.
+</ParamField>
+
+<ParamField path="pane_id" type="string">
+  The UUID of the pane to create the surface in. If not provided, uses the currently focused pane.
+</ParamField>
+
+<ParamField path="type" type="string" default="terminal">
+  The type of surface to create: `terminal` or `browser`
+</ParamField>
+
+<ParamField path="url" type="string">
+  For browser surfaces, the initial URL to navigate to
+</ParamField>
+
+<ParamField path="window_id" type="string">
+  The UUID of the window to target. If not provided, uses the current window.
+</ParamField>
+
+## Response
+
+Returns an object with the newly created surface's information:
+
+<ResponseField name="surface_id" type="string">
+  The UUID of the newly created surface
+</ResponseField>
+
+<ResponseField name="surface_ref" type="string">
+  The human-readable reference for the surface (e.g., `surface:2`)
+</ResponseField>
+
+<ResponseField name="workspace_id" type="string">
+  The UUID of the workspace containing the surface
+</ResponseField>
+
+<ResponseField name="workspace_ref" type="string">
+  The human-readable reference for the workspace
+</ResponseField>
+
+<ResponseField name="pane_id" type="string">
+  The UUID of the pane containing the surface
+</ResponseField>
+
+<ResponseField name="pane_ref" type="string">
+  The human-readable reference for the pane
+</ResponseField>
+
+<ResponseField name="window_id" type="string">
+  The UUID of the window
+</ResponseField>
+
+<ResponseField name="window_ref" type="string">
+  The human-readable reference for the window
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  The type of the created surface (`terminal` or `browser`)
+</ResponseField>
+
+## Example
+
+<CodeGroup>
+```json Create Terminal
+{
+  "id": "1",
+  "method": "surface.create",
+  "params": {
+    "type": "terminal"
+  }
+}
+```
+
+```json Create Browser
+{
+  "id": "2",
+  "method": "surface.create",
+  "params": {
+    "type": "browser",
+    "url": "https://example.com"
+  }
+}
+```
+
+```json Response
+{
+  "ok": true,
+  "result": {
+    "surface_id": "990e8400-e29b-41d4-a716-446655440000",
+    "surface_ref": "surface:3",
+    "workspace_id": "550e8400-e29b-41d4-a716-446655440000",
+    "workspace_ref": "workspace:1",
+    "pane_id": "880e8400-e29b-41d4-a716-446655440000",
+    "pane_ref": "pane:1",
+    "window_id": "660e8400-e29b-41d4-a716-446655440000",
+    "window_ref": "window:1",
+    "type": "terminal"
+  }
+}
+```
+</CodeGroup>
+
+## CLI Usage
+
+```bash
+# Create terminal surface
+cmux new-surface
+
+# Create browser surface
+cmux new-surface --type browser --url https://example.com
+
+# Create in specific pane
+cmux new-surface --pane pane:1
+```
+
+## Notes
+
+- New surfaces are automatically focused by default
+- Terminal surfaces start with the default shell
+- Browser surfaces can optionally specify an initial URL
+
+## See Also
+
+- [surface.split](/api/surface/split) - Create a new surface by splitting
+- [surface.close](/api/surface/close) - Close a surface
+- [surface.list](/api/surface/list) - List all surfaces

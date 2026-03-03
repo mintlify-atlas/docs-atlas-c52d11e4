@@ -1,0 +1,340 @@
+---
+title: Socket Control API
+description: Configure socket access modes, authentication, and security for cmux CLI automation
+---
+
+The cmux socket API enables CLI control and automation. You can configure who can connect, what they can do, and how authentication works.
+
+## Access Modes
+
+cmux supports five socket control modes, configurable in **Settings → Socket Control**:
+
+### Off
+
+Disables the local control socket entirely. No CLI commands will work.
+
+### cmux processes only (default)
+
+Only processes started inside cmux terminals can send commands. This is enforced via process ancestry checking.
+
+- **Use case**: You want to use `cmux` CLI commands from within cmux terminals, but not from external scripts.
+- **Security**: Prevents external automation clients from controlling cmux.
+
+### Automation mode
+
+Allows external local automation clients from the current macOS user, without ancestry checks.
+
+- **Use case**: You want to control cmux from external scripts, cron jobs, or other automation tools running as the same user.
+- **Security**: Any process owned by your user can connect. No password required.
+- **File permissions**: Socket is created with `0o600` (user-only read/write).
+
+### Password mode
+
+Requires socket authentication with a password. External clients must provide the password via CLI flag or environment variable.
+
+- **Use case**: You want to allow automation, but require explicit authentication.
+- **Security**: Password is stored locally (not in keychain). See [Password Storage](#password-storage) below.
+- **File permissions**: Socket is created with `0o600`.
+
+### Full open access (unsafe)
+
+Allows any local process and user to connect with no authentication.
+
+- **Use case**: Testing, development, or multi-user environments where you trust all local users.
+- **Security**: **Unsafe**. Any local user can control your cmux instance.
+- **File permissions**: Socket is created with `0o666` (world-readable/writable).
+
+## Socket Authentication
+
+When **Password mode** is enabled, CLI clients must authenticate before sending commands.
+
+### Password Resolution Order
+
+The CLI resolves the password in this order:
+
+1. **`--password` flag**: `cmux --password <secret> <command>`
+2. **`CMUX_SOCKET_PASSWORD` environment variable**: `export CMUX_SOCKET_PASSWORD=<secret>`
+3. **Password file**: `~/Library/Application Support/cmux/socket-control-password`
+
+If no password is found, the connection is rejected with `ERROR: Access denied`.
+
+### Setting the Password
+
+#### Via Settings UI
+
+1. Open **Settings → Socket Control**
+2. Select **Password mode**
+3. Enter a password in the text field
+4. The password is saved to `~/Library/Application Support/cmux/socket-control-password` with `0o600` permissions
+
+#### Via Password File
+
+Manually create the password file:
+
+```bash
+mkdir -p ~/Library/Application\ Support/cmux
+echo -n "your-secret-password" > ~/Library/Application\ Support/cmux/socket-control-password
+chmod 600 ~/Library/Application\ Support/cmux/socket-control-password
+```
+
+**Important**: Do not include a trailing newline. Use `echo -n` or trim the newline after writing.
+
+#### Via Environment Variable
+
+Set the password in your shell profile:
+
+```bash
+export CMUX_SOCKET_PASSWORD="your-secret-password"
+```
+
+This overrides the password file. Useful for CI/CD or temporary sessions.
+
+### Password Storage
+
+Passwords are stored in **plain text** in the local filesystem:
+
+```
+~/Library/Application Support/cmux/socket-control-password
+```
+
+- File permissions: `0o600` (user-only read/write)
+- Directory permissions: `0o700` (user-only read/write/execute)
+- **Not stored in macOS Keychain** (migrated from keychain in earlier versions)
+
+**Security considerations**:
+
+- The password file is only readable by your user account
+- Anyone with filesystem access to your user account can read it
+- Do not commit this file to version control
+- Rotate passwords if you suspect compromise
+
+### Legacy Keychain Migration
+
+If you used cmux before version 0.13, your password may have been stored in macOS Keychain. cmux automatically migrates keychain passwords to the file-based store on first launch.
+
+The migration:
+
+1. Reads the password from keychain (service: `com.cmuxterm.app.socket-control`, account: `local-socket-password`)
+2. Writes it to `~/Library/Application Support/cmux/socket-control-password`
+3. Deletes the keychain entry
+4. Sets a migration flag to prevent re-migration
+
+If the file already exists, migration is skipped.
+
+## Socket Path Configuration
+
+The socket path is determined by bundle identifier and build type:
+
+| Build | Bundle ID | Default Socket Path |
+|-------|-----------|---------------------|
+| Stable | `com.cmuxterm.app` | `/tmp/cmux.sock` |
+| Nightly | `com.cmuxterm.app.nightly` | `/tmp/cmux-nightly.sock` |
+| Staging | `com.cmuxterm.app.staging` | `/tmp/cmux-staging.sock` |
+| Debug | `com.cmuxterm.app.debug` | `/tmp/cmux-debug.sock` |
+| Tagged Debug | `com.cmuxterm.app.debug.<tag>` | `/tmp/cmux-debug.sock` |
+
+### Overriding the Socket Path
+
+You can override the socket path with the `CMUX_SOCKET_PATH` environment variable:
+
+```bash
+export CMUX_SOCKET_PATH="/tmp/my-custom-cmux.sock"
+cmux list-workspaces
+```
+
+**Override behavior**:
+
+- **Debug/staging builds**: Always honor `CMUX_SOCKET_PATH`
+- **Stable/nightly builds**: Only honor if `CMUX_ALLOW_SOCKET_OVERRIDE=1` is set
+
+This prevents accidental socket path collisions between different cmux instances.
+
+## Environment Variables
+
+### CMUX_SOCKET_PATH
+
+Override the Unix socket path:
+
+```bash
+export CMUX_SOCKET_PATH="/tmp/cmux-custom.sock"
+```
+
+Respected by both the app (socket server) and CLI (socket client).
+
+### CMUX_SOCKET_MODE
+
+Override the socket control mode at launch:
+
+```bash
+export CMUX_SOCKET_MODE=automation
+# or: off, cmuxOnly, password, allowAll
+```
+
+Overrides the user's saved preference. Useful for testing or automation.
+
+### CMUX_SOCKET_ENABLE
+
+Explicitly enable or disable the socket:
+
+```bash
+export CMUX_SOCKET_ENABLE=1  # force on
+export CMUX_SOCKET_ENABLE=0  # force off
+```
+
+Overrides `CMUX_SOCKET_MODE`. If disabled, the app will not create a socket.
+
+### CMUX_SOCKET_PASSWORD
+
+Provide the socket password for authentication:
+
+```bash
+export CMUX_SOCKET_PASSWORD="your-secret-password"
+cmux list-workspaces
+```
+
+This takes precedence over the password file and the `--password` CLI flag.
+
+### CMUX_ALLOW_SOCKET_OVERRIDE
+
+Allow `CMUX_SOCKET_PATH` to override the default path in stable/nightly builds:
+
+```bash
+export CMUX_ALLOW_SOCKET_OVERRIDE=1
+export CMUX_SOCKET_PATH="/tmp/cmux-test.sock"
+```
+
+Debug and staging builds always allow overrides without this flag.
+
+## Security Considerations
+
+### Socket Ownership Verification
+
+The CLI verifies socket ownership before connecting:
+
+```swift
+// CLI/cmux.swift:476-482
+var st = stat()
+guard stat(path, &st) == 0 else {
+    throw CLIError(message: "Socket not found at \(path)")
+}
+guard st.st_uid == getuid() else {
+    throw CLIError(message: "Socket is not owned by the current user — refusing to connect")
+}
+```
+
+This prevents **fake-socket attacks** where a malicious user creates a socket at the expected path.
+
+### File Permissions
+
+| Mode | Socket Permissions | Who Can Connect |
+|------|-------------------|------------------|
+| Off | N/A | No one |
+| cmux processes only | `0o600` | Same user, process ancestry |
+| Automation | `0o600` | Same user, no ancestry check |
+| Password | `0o600` | Same user, with valid password |
+| Full open access | `0o666` | Any user, no auth |
+
+**Recommendation**: Use **cmux processes only** (default) or **password mode** for production. Only use **full open access** for testing.
+
+### Password File Security
+
+The password file is protected with `0o600` (user-only read/write), but:
+
+- **Filesystem access = password access**: If an attacker gains access to your user account, they can read the password.
+- **Backup exposure**: The password file may be included in Time Machine or other backups.
+- **Process inspection**: On macOS, other processes running as your user can read the file.
+
+**Mitigations**:
+
+- Rotate passwords regularly
+- Use **cmux processes only** mode if you don't need external automation
+- Exclude `~/Library/Application Support/cmux/` from backups if needed
+
+### Network Exposure
+
+The socket is a **Unix domain socket** (not a TCP socket), so it is **not exposed to the network**. Only local processes can connect.
+
+If you need remote control, you must tunnel the socket over SSH or another secure transport.
+
+## Example: Automation with Password
+
+```bash
+# Set password in Settings → Socket Control → Password mode
+# Or create password file:
+echo -n "my-secret-password" > ~/Library/Application\ Support/cmux/socket-control-password
+chmod 600 ~/Library/Application\ Support/cmux/socket-control-password
+
+# Export password for CLI
+export CMUX_SOCKET_PASSWORD="my-secret-password"
+
+# Now run commands
+cmux list-workspaces
+cmux new-workspace --cwd ~/projects
+cmux send "echo 'Hello from automation'"
+```
+
+## Example: Multi-Instance Setup
+
+```bash
+# Launch cmux with a custom socket path
+export CMUX_SOCKET_PATH="/tmp/cmux-project-a.sock"
+export CMUX_SOCKET_MODE=automation
+open -a cmux
+
+# Launch a second instance with a different socket
+export CMUX_SOCKET_PATH="/tmp/cmux-project-b.sock"
+export CMUX_SOCKET_MODE=automation
+open -a cmux
+
+# Control each instance separately
+CMUX_SOCKET_PATH="/tmp/cmux-project-a.sock" cmux list-workspaces
+CMUX_SOCKET_PATH="/tmp/cmux-project-b.sock" cmux list-workspaces
+```
+
+## Troubleshooting
+
+### "Socket not found"
+
+The socket file doesn't exist. Possible causes:
+
+1. **Socket control is disabled**: Check **Settings → Socket Control** and ensure it's not set to **Off**.
+2. **Wrong socket path**: Verify `CMUX_SOCKET_PATH` matches the path cmux is using.
+3. **cmux is not running**: Launch cmux first.
+
+### "Socket is not owned by the current user"
+
+The socket exists but is owned by a different user. This is a security error to prevent fake-socket attacks.
+
+**Solution**: Delete the socket and restart cmux:
+
+```bash
+rm /tmp/cmux.sock
+# Restart cmux
+```
+
+### "ERROR: Access denied"
+
+You're in **Password mode** but didn't provide a valid password.
+
+**Solution**:
+
+1. Verify the password is set in Settings or the password file
+2. Provide the password via CLI:
+   ```bash
+   cmux --password <secret> list-workspaces
+   # or
+   export CMUX_SOCKET_PASSWORD=<secret>
+   cmux list-workspaces
+   ```
+
+### "Command timed out"
+
+The CLI sent a command but didn't receive a response within the timeout (default: 15 seconds).
+
+**Possible causes**:
+
+- cmux is frozen or unresponsive
+- High system load
+- Socket buffer is full
+
+**Solution**: Restart cmux. If the issue persists, report it on GitHub.

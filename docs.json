@@ -1,122 +1,236 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Cmux",
+  "theme": "palm",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#29a9f9",
+    "light": "#7986f4"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "https://media.brand.dev/e75cc262-8a76-417d-98d8-0ad64d76eff1.png",
+  "logo": {
+    "light": "https://media.brand.dev/e75cc262-8a76-417d-98d8-0ad64d76eff1.png",
+    "dark": "https://media.brand.dev/e75cc262-8a76-417d-98d8-0ad64d76eff1.png"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/manaflow-ai/cmux"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/manaflow-ai/cmux",
+      "x": "https://x.com/manaflowai",
+      "discord": "https://discord.gg/xsgFEVrWCZ"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Get Started",
             "pages": [
-              "index",
-              "quickstart",
-              "development"
+              "introduction",
+              "installation",
+              "quickstart"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Core Features",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "features/workspaces",
+              "features/notifications",
+              "features/browser",
+              "features/vertical-tabs",
+              "features/split-panes"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Keyboard Shortcuts",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
+              "keyboard-shortcuts/workspaces",
+              "keyboard-shortcuts/surfaces",
+              "keyboard-shortcuts/splits",
+              "keyboard-shortcuts/browser",
+              "keyboard-shortcuts/notifications"
             ]
           },
           {
-            "group": "AI tools",
+            "group": "Integrations",
             "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "integrations/overview",
+              "integrations/claude-code",
+              "integrations/opencode",
+              "integrations/codex"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/ghostty-config",
+              "configuration/socket-api",
+              "configuration/session-restore"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "CLI Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Getting Started",
             "pages": [
-              "api-reference/introduction"
+              "cli/overview",
+              "cli/authentication"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Window Management",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "cli/windows/list",
+              "cli/windows/create",
+              "cli/windows/focus",
+              "cli/windows/close"
+            ]
+          },
+          {
+            "group": "Workspace Management",
+            "pages": [
+              "cli/workspaces/list",
+              "cli/workspaces/create",
+              "cli/workspaces/select",
+              "cli/workspaces/rename",
+              "cli/workspaces/close"
+            ]
+          },
+          {
+            "group": "Pane Management",
+            "pages": [
+              "cli/panes/list",
+              "cli/panes/create",
+              "cli/panes/focus",
+              "cli/panes/split"
+            ]
+          },
+          {
+            "group": "Surface Management",
+            "pages": [
+              "cli/surfaces/list",
+              "cli/surfaces/create",
+              "cli/surfaces/focus",
+              "cli/surfaces/close",
+              "cli/surfaces/move",
+              "cli/surfaces/reorder"
+            ]
+          },
+          {
+            "group": "Browser Control",
+            "pages": [
+              "cli/browser/overview",
+              "cli/browser/navigation",
+              "cli/browser/interaction",
+              "cli/browser/automation",
+              "cli/browser/snapshot"
+            ]
+          },
+          {
+            "group": "Notifications",
+            "pages": [
+              "cli/notifications/send",
+              "cli/notifications/list",
+              "cli/notifications/clear"
+            ]
+          },
+          {
+            "group": "System Commands",
+            "pages": [
+              "cli/system/identify",
+              "cli/system/capabilities",
+              "cli/system/tree"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "System",
+            "pages": [
+              "api/system/ping",
+              "api/system/identify",
+              "api/system/capabilities"
+            ]
+          },
+          {
+            "group": "Window",
+            "pages": [
+              "api/window/list",
+              "api/window/create",
+              "api/window/focus",
+              "api/window/close"
+            ]
+          },
+          {
+            "group": "Workspace",
+            "pages": [
+              "api/workspace/list",
+              "api/workspace/create",
+              "api/workspace/select",
+              "api/workspace/rename",
+              "api/workspace/close",
+              "api/workspace/move"
+            ]
+          },
+          {
+            "group": "Pane",
+            "pages": [
+              "api/pane/list",
+              "api/pane/create",
+              "api/pane/focus",
+              "api/pane/surfaces"
+            ]
+          },
+          {
+            "group": "Surface",
+            "pages": [
+              "api/surface/list",
+              "api/surface/create",
+              "api/surface/focus",
+              "api/surface/close",
+              "api/surface/split",
+              "api/surface/move",
+              "api/surface/reorder",
+              "api/surface/send-text",
+              "api/surface/send-key",
+              "api/surface/read-text"
+            ]
+          },
+          {
+            "group": "Browser",
+            "pages": [
+              "api/browser/navigate",
+              "api/browser/eval",
+              "api/browser/snapshot",
+              "api/browser/click",
+              "api/browser/type",
+              "api/browser/wait",
+              "api/browser/screenshot"
+            ]
+          },
+          {
+            "group": "Notifications",
+            "pages": [
+              "api/notifications/send",
+              "api/notifications/list",
+              "api/notifications/clear",
+              "api/notifications/mark-read"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

@@ -1,0 +1,201 @@
+---
+title: window.create
+description: Create a new application window
+---
+
+## Overview
+
+Creates a new cmux application window and returns its identifier.
+
+## Request Format
+
+### JSON-RPC
+
+```json
+{
+  "id": "<request-id>",
+  "method": "window.create",
+  "params": {}
+}
+```
+
+## Parameters
+
+This method accepts no parameters.
+
+## Response
+
+### Success Response
+
+<ResponseField name="ok" type="boolean" required>
+  Always `true` for successful responses
+</ResponseField>
+
+<ResponseField name="result" type="object" required>
+  <Expandable title="properties">
+    <ResponseField name="window_id" type="string" required>
+      UUID of the newly created window
+    </ResponseField>
+    <ResponseField name="window_ref" type="string" required>
+      Human-readable reference in format `window:N`
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Success Response
+
+```json
+{
+  "ok": true,
+  "result": {
+    "window_id": "C3D4E5F6-7890-ABCD-EF12-34567890ABCD",
+    "window_ref": "window:2"
+  }
+}
+```
+
+### Error Response
+
+<ResponseField name="ok" type="boolean" required>
+  Always `false` for error responses
+</ResponseField>
+
+<ResponseField name="error" type="object" required>
+  <Expandable title="properties">
+    <ResponseField name="code" type="string" required>
+      Error code identifying the failure reason
+    </ResponseField>
+    <ResponseField name="message" type="string" required>
+      Human-readable error description
+    </ResponseField>
+    <ResponseField name="data" type="object | null">
+      Additional error context (if available)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Error Response
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "internal_error",
+    "message": "Failed to create window",
+    "data": null
+  }
+}
+```
+
+## Error Codes
+
+<ParamField name="internal_error" type="error">
+  Failed to create the window due to an internal error
+</ParamField>
+
+## Usage Examples
+
+### CLI
+
+```bash
+# Create a new window
+cmux new-window
+
+# Create a new window and capture the ID
+WINDOW_ID=$(cmux new-window)
+echo "Created window: $WINDOW_ID"
+```
+
+### Python
+
+```python
+import json
+import socket
+
+def create_window(socket_path="/tmp/cmux.sock"):
+    request = {
+        "id": "req-1",
+        "method": "window.create",
+        "params": {}
+    }
+    
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+        sock.connect(socket_path)
+        sock.sendall((json.dumps(request) + "\n").encode())
+        response = json.loads(sock.recv(8192).decode().strip())
+        
+    if response["ok"]:
+        window_id = response["result"]["window_id"]
+        window_ref = response["result"]["window_ref"]
+        print(f"Created window {window_ref}: {window_id}")
+        return window_id
+    else:
+        error = response["error"]
+        raise Exception(f"{error['code']}: {error['message']}")
+
+window_id = create_window()
+```
+
+### Swift
+
+```swift
+let response = try client.sendV2(method: "window.create", params: [:])
+
+if let windowId = response["window_id"] as? String,
+   let windowRef = response["window_ref"] as? String {
+    print("Created window \(windowRef): \(windowId)")
+}
+```
+
+### JavaScript (Node.js)
+
+```javascript
+const net = require('net');
+
+function createWindow(socketPath = '/tmp/cmux.sock') {
+  return new Promise((resolve, reject) => {
+    const client = net.createConnection(socketPath);
+    
+    const request = {
+      id: 'req-1',
+      method: 'window.create',
+      params: {}
+    };
+    
+    client.on('connect', () => {
+      client.write(JSON.stringify(request) + '\n');
+    });
+    
+    client.on('data', (data) => {
+      const response = JSON.parse(data.toString().trim());
+      client.end();
+      
+      if (response.ok) {
+        resolve(response.result.window_id);
+      } else {
+        reject(new Error(`${response.error.code}: ${response.error.message}`));
+      }
+    });
+    
+    client.on('error', reject);
+  });
+}
+
+createWindow().then(windowId => {
+  console.log(`Created window: ${windowId}`);
+});
+```
+
+## Behavior Notes
+
+- The newly created window is **not automatically focused** automatically
+- The new window starts with no workspaces; use [workspace.create](/api/workspace/create) to add workspaces
+- Window IDs are stable UUIDs that persist for the lifetime of the window
+- The `window_ref` index is based on the window's position in the current window list
+
+## Related Methods
+
+- [window.list](/api/window/list) - List all windows
+- [window.focus](/api/window/focus) - Focus the new window
+- [window.close](/api/window/close) - Close a window
+- [workspace.create](/api/workspace/create) - Create a workspace in the new window

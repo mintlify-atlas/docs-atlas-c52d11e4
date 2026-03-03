@@ -1,0 +1,233 @@
+---
+title: "new-split"
+description: "Split a surface within a pane"
+---
+
+Split the current surface in the specified direction, creating a new surface within the same pane. Unlike `new-pane` which creates workspace-level splits, `new-split` creates a split within a single pane.
+
+## Usage
+
+```bash
+cmux new-split <direction> [flags]
+```
+
+## Arguments
+
+<ParamField path="direction" type="string" required>
+  Split direction: `left`, `right`, `up`, or `down`
+</ParamField>
+
+## Flags
+
+<ParamField path="--workspace" type="string">
+  Target workspace (default: `$CMUX_WORKSPACE_ID`)
+</ParamField>
+
+<ParamField path="--surface" type="string">
+  Surface to split from (default: `$CMUX_SURFACE_ID`)
+</ParamField>
+
+<ParamField path="--panel" type="string">
+  Alias for `--surface`
+</ParamField>
+
+## Pane vs Surface Split
+
+Understanding the difference:
+
+- **`new-pane`**: Creates a workspace-level split (new pane container)
+- **`new-split`**: Creates a surface-level split within the current pane
+
+Think of it this way:
+- Workspace contains panes (use `new-pane` to split)
+- Pane contains surfaces/tabs (use `new-split` to split within)
+
+### Visual Example
+
+```
+┌─────────────────────────────────┐
+│ Workspace                       │
+│  ┌────────────┬───────────────┐ │  <- Pane-level split (new-pane)
+│  │ Pane 1     │ Pane 2        │ │
+│  │ ┌────┬───┐ │               │ │  <- Surface-level split (new-split)
+│  │ │Srf1│Sr2│ │  Surface 3    │ │
+│  │ └────┴───┘ │               │ │
+│  └────────────┴───────────────┘ │
+└─────────────────────────────────┘
+```
+
+## Split Directions
+
+The direction argument controls where the new surface appears:
+
+<Accordion title="right - Vertical split, new surface on right">
+  Creates a vertical divider with the new surface on the right side.
+  
+  ```
+  Before:           After:
+  ┌─────────┐      ┌────┬────┐
+  │         │      │    │New │
+  │Current  │  →   │Curr│Srf │
+  │         │      │    │    │
+  └─────────┘      └────┴────┘
+  ```
+</Accordion>
+
+<Accordion title="left - Vertical split, new surface on left">
+  Creates a vertical divider with the new surface on the left side.
+  
+  ```
+  Before:           After:
+  ┌─────────┐      ┌────┬────┐
+  │         │      │New │    │
+  │Current  │  →   │Srf │Curr│
+  │         │      │    │    │
+  └─────────┘      └────┴────┘
+  ```
+</Accordion>
+
+<Accordion title="down - Horizontal split, new surface below">
+  Creates a horizontal divider with the new surface below.
+  
+  ```
+  Before:           After:
+  ┌─────────┐      ┌─────────┐
+  │         │      │Current  │
+  │Current  │  →   ├─────────┤
+  │         │      │New Srf  │
+  └─────────┘      └─────────┘
+  ```
+</Accordion>
+
+<Accordion title="up - Horizontal split, new surface above">
+  Creates a horizontal divider with the new surface above.
+  
+  ```
+  Before:           After:
+  ┌─────────┐      ┌─────────┐
+  │         │      │New Srf  │
+  │Current  │  →   ├─────────┤
+  │         │      │Current  │
+  └─────────┘      └─────────┘
+  ```
+</Accordion>
+
+## Handle-Based Targeting
+
+By default, splits the current focused surface (`$CMUX_SURFACE_ID`). You can target a specific surface:
+
+```bash
+# Split a specific surface
+cmux new-split right --surface surface:2
+
+# Works across workspaces
+cmux new-split down --workspace workspace:2 --surface surface:5
+```
+
+## JSON Output
+
+With `--json` flag, returns structured output:
+
+```json
+{
+  "surface_ref": "surface:4",
+  "surface_id": "uuid-here",
+  "pane_ref": "pane:1",
+  "pane_id": "uuid-here",
+  "workspace_ref": "workspace:1",
+  "workspace_id": "uuid-here"
+}
+```
+
+## Examples
+
+### Split current surface to the right
+
+```bash
+cmux new-split right
+```
+
+Splits the currently focused surface vertically, new surface appears on the right.
+
+### Split downward
+
+```bash
+cmux new-split down
+```
+
+Splits the current surface horizontally, new surface appears below.
+
+### Split specific surface
+
+```bash
+cmux new-split right --surface surface:2
+```
+
+### Split in another workspace
+
+```bash
+cmux new-split down --workspace workspace:1
+```
+
+Splits the focused surface in workspace 1.
+
+### Split left from specific surface
+
+```bash
+cmux new-split left --surface surface:3 --workspace workspace:2
+```
+
+### Create multiple splits
+
+```bash
+# Split right twice to create a 3-column layout
+cmux new-split right
+cmux new-split right
+```
+
+### Scripted split setup
+
+```bash
+#!/bin/bash
+# Create a dashboard layout with 4 splits
+
+# Start with one surface, split right
+cmux new-split right
+
+# Split the left one down
+OUTPUT1=$(cmux --json new-split down --surface surface:1)
+SRF1=$(echo "$OUTPUT1" | jq -r '.surface_ref')
+
+# Split the right one down  
+OUTPUT2=$(cmux --json new-split down --surface surface:2)
+SRF2=$(echo "$OUTPUT2" | jq -r '.surface_ref')
+
+# Now you have 4 surfaces in a 2x2 grid
+echo "Created 4-pane layout"
+```
+
+### Using --panel alias
+
+```bash
+# --panel is an alias for --surface
+cmux new-split down --panel surface:1
+```
+
+## When to Use new-split vs new-pane
+
+Use `new-split` when:
+- You want to split a surface within the current pane
+- Creating a multi-panel view within a single logical workspace area
+- You want surfaces to share the same pane container
+
+Use `new-pane` when:
+- You want independent workspace-level splits
+- Creating separate focus areas with their own tab bars
+- You need distinct pane containers
+
+## See Also
+
+- [new-pane](/cli/panes/create) - Create workspace-level pane splits
+- [new-surface](/cli/surfaces/create) - Add a new tab to a pane
+- [move-surface](/cli/surfaces/move) - Move existing surface to a different pane
+- [list-pane-surfaces](/api/pane/surfaces) - List surfaces in a pane

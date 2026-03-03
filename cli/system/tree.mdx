@@ -1,0 +1,384 @@
+---
+title: tree
+description: Display hierarchical layout of windows, workspaces, panes, and surfaces
+---
+
+The `tree` command shows the complete hierarchical structure of windows, workspaces, panes, and surfaces in cmux.
+
+## Usage
+
+```bash
+cmux tree [--workspace <id|ref|index>] [--all] [--json]
+```
+
+## Options
+
+| Option | Description |
+|--------|-------------|
+| `--workspace` | Show tree for a specific workspace (ID, ref like `workspace:1`, or index) |
+| `--all` | Include all windows (default: current window only) |
+| `--json` | Output in JSON format instead of formatted text |
+| `--id-format` | Control ID format: `refs`, `uuids`, or `both` |
+
+## Output Formats
+
+### Text Format (Default)
+
+The default text output shows a tree-style representation:
+
+```
+window:1 [current] [3 workspaces]
+├─ workspace:1 [selected]
+│  ├─ pane:1 [focused] [2 surfaces]
+│  │  ├─ surface:1 [terminal] [selected]
+│  │  └─ surface:2 [browser] https://example.com
+│  └─ pane:2 [1 surface]
+│     └─ surface:3 [terminal]
+├─ workspace:2
+│  └─ pane:3 [focused] [1 surface]
+│     └─ surface:4 [terminal] [selected]
+└─ workspace:3
+   └─ pane:4 [focused] [1 surface]
+      └─ surface:5 [terminal] [selected]
+```
+
+### JSON Format
+
+With `--json`, returns a structured object:
+
+```json
+{
+  "active": {
+    "window_id": "uuid",
+    "window_ref": "window:1",
+    "workspace_id": "uuid",
+    "workspace_ref": "workspace:1",
+    "pane_id": "uuid",
+    "pane_ref": "pane:1",
+    "surface_id": "uuid",
+    "surface_ref": "surface:1"
+  },
+  "caller": {
+    "workspace_id": "uuid",
+    "surface_id": "uuid"
+  },
+  "windows": [
+    {
+      "id": "uuid",
+      "ref": "window:1",
+      "index": 0,
+      "key": true,
+      "visible": true,
+      "current": true,
+      "active": true,
+      "workspace_count": 3,
+      "selected_workspace_id": "uuid",
+      "selected_workspace_ref": "workspace:1",
+      "workspaces": [
+        {
+          "id": "uuid",
+          "ref": "workspace:1",
+          "index": 0,
+          "selected": true,
+          "active": true,
+          "title": "Main",
+          "panes": [
+            {
+              "id": "uuid",
+              "ref": "pane:1",
+              "index": 0,
+              "focused": true,
+              "active": true,
+              "surface_count": 2,
+              "surfaces": [
+                {
+                  "id": "uuid",
+                  "ref": "surface:1",
+                  "index": 0,
+                  "type": "terminal",
+                  "title": "zsh",
+                  "selected": true,
+                  "active": true,
+                  "here": true,
+                  "pane_id": "uuid",
+                  "pane_ref": "pane:1",
+                  "url": null
+                },
+                {
+                  "id": "uuid",
+                  "ref": "surface:2",
+                  "index": 1,
+                  "type": "browser",
+                  "title": "Example Domain",
+                  "selected": false,
+                  "active": false,
+                  "here": false,
+                  "pane_id": "uuid",
+                  "pane_ref": "pane:1",
+                  "url": "https://example.com"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Tree Structure
+
+The hierarchy follows this structure:
+
+```
+Windows (top level)
+└─ Workspaces (tabs in a window)
+   └─ Panes (split containers)
+      └─ Surfaces (terminal or browser instances)
+```
+
+## Fields
+
+### Window Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` / `ref` | string | Window identifier |
+| `index` | number | Window position (0-based) |
+| `key` | boolean | Is the key window (focused) |
+| `visible` | boolean | Window is visible |
+| `current` | boolean | Currently active window |
+| `active` | boolean | Same as `current` |
+| `workspace_count` | number | Number of workspaces in window |
+| `selected_workspace_id` | string | ID of selected workspace |
+| `workspaces` | array | Child workspaces |
+
+### Workspace Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` / `ref` | string | Workspace identifier |
+| `index` | number | Workspace position (0-based) |
+| `selected` | boolean | Currently selected workspace |
+| `active` | boolean | Currently active workspace |
+| `title` | string | Workspace title |
+| `panes` | array | Child panes |
+
+### Pane Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` / `ref` | string | Pane identifier |
+| `index` | number | Pane position (0-based) |
+| `focused` | boolean | Currently focused pane |
+| `active` | boolean | Same as `focused` |
+| `surface_count` | number | Number of surfaces in pane |
+| `surfaces` | array | Child surfaces |
+
+### Surface Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` / `ref` | string | Surface identifier |
+| `index` | number | Surface position in pane (0-based) |
+| `type` | string | Surface type: `terminal` or `browser` |
+| `title` | string | Surface title (shell name or page title) |
+| `selected` | boolean | Selected in its pane |
+| `active` | boolean | Currently active/focused surface |
+| `here` | boolean | Matches caller context (where command was run) |
+| `pane_id` / `pane_ref` | string | Parent pane identifier |
+| `url` | string \| null | Browser URL (null for terminal surfaces) |
+
+## Active vs. Caller Context
+
+### `active` Object
+
+Reflects the currently focused window/workspace/pane/surface in the application.
+
+### `caller` Object
+
+When run from a cmux terminal, identifies the surface where the command was executed. Uses `CMUX_WORKSPACE_ID` and `CMUX_SURFACE_ID` environment variables.
+
+### Markers
+
+- `active: true` - The currently focused/active element in the UI
+- `here: true` - Matches the `caller` context (where the command was run)
+
+These can differ when running `tree` from one surface while another surface is focused.
+
+## Examples
+
+### Show current window layout
+
+```bash
+cmux tree
+```
+
+Displays the tree for the current window only.
+
+### Show all windows
+
+```bash
+cmux tree --all
+```
+
+Displays all windows and their complete hierarchies.
+
+### Get tree for specific workspace
+
+```bash
+cmux tree --workspace workspace:2
+```
+
+Shows only the specified workspace and its panes/surfaces.
+
+### JSON output
+
+```bash
+cmux tree --json
+```
+
+Returns the full tree structure in JSON format for programmatic parsing.
+
+### Extract specific information
+
+```bash
+# Get all surface IDs
+cmux tree --json | jq -r '.windows[].workspaces[].panes[].surfaces[].ref'
+
+# Count total surfaces
+cmux tree --json | jq '[.windows[].workspaces[].panes[].surfaces[]] | length'
+
+# Find browser surfaces
+cmux tree --json | jq '.windows[].workspaces[].panes[].surfaces[] | select(.type == "browser")'
+
+# Get current workspace title
+cmux tree --json | jq -r '.windows[] | select(.active) | .workspaces[] | select(.active) | .title'
+```
+
+## Agent Discovery Workflow
+
+The `tree` command is essential for agents to understand the complete environment layout:
+
+### 1. Discover All Surfaces
+
+```bash
+# Get all surfaces in the current window
+SURFACES=$(cmux tree --json | jq -r '.windows[].workspaces[].panes[].surfaces[] | .ref')
+
+for SURFACE in $SURFACES; do
+  echo "Found: $SURFACE"
+done
+```
+
+### 2. Find Caller Context
+
+```bash
+# Identify where the command was run from
+TREE=$(cmux tree --json)
+CALLER_SURFACE=$(echo $TREE | jq -r '.caller.surface_id')
+HERE=$(echo $TREE | jq -r ".windows[].workspaces[].panes[].surfaces[] | select(.here == true) | .ref")
+
+echo "Running from: $HERE"
+```
+
+### 3. Enumerate Related Surfaces
+
+```bash
+# Find other surfaces in the same pane
+TREE=$(cmux tree --json)
+MY_PANE=$(echo $TREE | jq -r ".windows[].workspaces[].panes[] | select(.surfaces[] | .here == true) | .ref")
+
+SIBLINGS=$(echo $TREE | jq -r ".windows[].workspaces[].panes[] | select(.ref == \"$MY_PANE\") | .surfaces[] | select(.here != true) | .ref")
+
+echo "Sibling surfaces: $SIBLINGS"
+```
+
+### 4. Workspace-Level Discovery
+
+```bash
+# Get all panes in the current workspace
+WS_REF=$(cmux tree --json | jq -r '.active.workspace_ref')
+PANES=$(cmux tree --json | jq -r ".windows[].workspaces[] | select(.ref == \"$WS_REF\") | .panes[] | .ref")
+
+echo "Panes in workspace $WS_REF:"
+echo "$PANES"
+```
+
+### 5. Browser Surface Discovery
+
+```bash
+# Find all browser surfaces and their URLs
+cmux tree --json | jq -r '.windows[].workspaces[].panes[].surfaces[] | select(.type == "browser") | "\(.ref): \(.url)"'
+```
+
+### 6. Multi-Window Enumeration
+
+```bash
+# Enumerate all windows and their workspace counts
+cmux tree --all --json | jq -r '.windows[] | "\(.ref): \(.workspace_count) workspaces"'
+```
+
+## Use Cases
+
+### Automated Workspace Mapping
+
+Map the entire layout for backup or migration:
+
+```bash
+cmux tree --all --json > workspace-layout.json
+```
+
+### Find Active Terminal
+
+```bash
+# Get the ref of the currently active terminal surface
+ACTIVE_TERMINAL=$(cmux tree --json | jq -r '.windows[].workspaces[].panes[].surfaces[] | select(.active == true and .type == "terminal") | .ref')
+
+echo "Active terminal: $ACTIVE_TERMINAL"
+```
+
+### Cross-Surface Communication
+
+```bash
+# Send a message to all surfaces in the current workspace
+WS=$(cmux tree --json | jq -r '.active.workspace_ref')
+SURFACES=$(cmux tree --json | jq -r ".windows[].workspaces[] | select(.ref == \"$WS\") | .panes[].surfaces[] | .ref")
+
+for SURFACE in $SURFACES; do
+  cmux send --surface $SURFACE "echo 'Broadcast message'"
+done
+```
+
+### Pane Layout Inspection
+
+```bash
+# Count surfaces per pane in the current workspace
+cmux tree --json | jq '.windows[].workspaces[] | select(.active) | .panes[] | "\(.ref): \(.surface_count) surfaces"'
+```
+
+## Implementation Notes
+
+From `CLI/cmux.swift:4661-4908`:
+
+- The command uses the `system.tree` v2 socket method
+- Falls back to legacy mode if `system.tree` is not available (older servers)
+- In legacy mode, constructs the tree by calling multiple v2 methods:
+  - `window.list` - Enumerate windows
+  - `workspace.list` - Get workspaces per window
+  - `pane.list` - Get panes per workspace
+  - `surface.list` - Get surfaces per workspace
+  - `browser.tab.list` or `browser.url.get` - Fetch browser URLs
+- The `caller` context is derived from `CMUX_WORKSPACE_ID` and `CMUX_SURFACE_ID` environment variables
+- Active markers (`active: true`) are set by comparing handles against the focused context
+- Caller markers (`here: true`) are set by matching the caller surface
+- Browser URLs are fetched only if browser surfaces exist (performance optimization)
+
+## Related Commands
+
+- [identify](/cli/system/identify) - Get current context without full tree
+- [capabilities](/cli/system/capabilities) - Check if system.tree is supported
+- [list-workspaces](/cli/workspaces/list) - List workspaces only
+- [list-panes](/cli/panes/list) - List panes only
+- [list-panels](/cli/surfaces/list) - List surfaces only

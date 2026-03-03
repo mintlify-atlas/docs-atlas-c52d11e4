@@ -1,0 +1,120 @@
+---
+title: surface.focus
+description: Focus a specific surface
+---
+
+Sets focus to the specified surface, making it the active surface for keyboard input.
+
+## Method
+
+```
+surface.focus
+```
+
+## Parameters
+
+<ParamField path="surface_id" type="string" required>
+  The UUID or reference (e.g., `surface:1`) of the surface to focus
+</ParamField>
+
+<ParamField path="workspace_id" type="string">
+  The UUID of the workspace containing the surface. If not provided, searches the currently selected workspace.
+</ParamField>
+
+<ParamField path="window_id" type="string">
+  The UUID of the window to target. If not provided, uses the current window.
+</ParamField>
+
+## Response
+
+Returns an object confirming the focus operation:
+
+<ResponseField name="surface_id" type="string">
+  The UUID of the focused surface
+</ResponseField>
+
+<ResponseField name="surface_ref" type="string">
+  The human-readable reference for the surface
+</ResponseField>
+
+<ResponseField name="workspace_id" type="string">
+  The UUID of the workspace containing the surface
+</ResponseField>
+
+<ResponseField name="workspace_ref" type="string">
+  The human-readable reference for the workspace
+</ResponseField>
+
+<ResponseField name="window_id" type="string">
+  The UUID of the window
+</ResponseField>
+
+<ResponseField name="window_ref" type="string">
+  The human-readable reference for the window
+</ResponseField>
+
+## Example
+
+<CodeGroup>
+```json Socket Request
+{
+  "id": "1",
+  "method": "surface.focus",
+  "params": {
+    "surface_id": "770e8400-e29b-41d4-a716-446655440000"
+  }
+}
+```
+
+```json Using Reference
+{
+  "id": "2",
+  "method": "surface.focus",
+  "params": {
+    "surface_id": "surface:2"
+  }
+}
+```
+
+```json Response
+{
+  "ok": true,
+  "result": {
+    "surface_id": "770e8400-e29b-41d4-a716-446655440000",
+    "surface_ref": "surface:2",
+    "workspace_id": "550e8400-e29b-41d4-a716-446655440000",
+    "workspace_ref": "workspace:1",
+    "window_id": "660e8400-e29b-41d4-a716-446655440000",
+    "window_ref": "window:1"
+  }
+}
+```
+</CodeGroup>
+
+## CLI Usage
+
+```bash
+# Focus by UUID
+cmux focus-panel --panel 770e8400-e29b-41d4-a716-446655440000
+
+# Focus by reference
+cmux focus-panel --panel surface:2
+```
+
+## Errors
+
+<ResponseField name="not_found" type="error">
+  The specified surface does not exist in the workspace
+</ResponseField>
+
+## Notes
+
+- Focusing a surface also selects its containing workspace if not already selected
+- The window may be brought to front depending on focus policy settings
+- Socket commands do not steal macOS app focus unless explicitly requested
+
+## See Also
+
+- [surface.list](/api/surface/list) - List all surfaces to find IDs
+- [pane.focus](/api/pane/focus) - Focus a pane instead
+- [workspace.select](/api/workspace/select) - Select a workspace

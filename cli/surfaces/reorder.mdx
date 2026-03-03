@@ -1,0 +1,109 @@
+---
+title: reorder-surface
+description: Reorder a surface within its pane
+---
+
+The `reorder-surface` command changes the position of a surface within its current pane **without moving it to a different pane**.
+
+## Terminology
+
+In cmux, **surface** and **panel** are synonymous terms. This command reorders surfaces within a single pane's surface list.
+
+## Usage
+
+```bash
+cmux reorder-surface <surface> [--before <surface>] [--after <surface>] [--index <n>] 
+                     [--workspace <id|ref>]
+```
+
+## Options
+
+### Target surface
+
+- `--surface <id|ref|index>` - Surface to reorder (or first positional argument)
+
+### Positioning
+
+- `--before <surface>` or `--before-surface <surface>` - Move before this surface
+- `--after <surface>` or `--after-surface <surface>` - Move after this surface
+- `--index <n>` - Move to specific index (0-based)
+
+### Context
+
+- `--workspace <id|ref>` - Target workspace (defaults to `$CMUX_WORKSPACE_ID`)
+
+## Targeting
+
+Surfaces can be targeted by:
+- **UUID** - Full surface ID
+- **Ref** - Short reference (e.g., `surface:0`, `surface:1`)
+- **Index** - Numeric index within the pane (0-based)
+
+## Reorder Semantics
+
+The `reorder-surface` command:
+
+- **Stays within the same pane** - Does not move the surface to a different pane
+- **Preserves surface_id** - The surface retains its identity
+- **Changes visual order** - Affects how surfaces are displayed in the pane's surface list
+
+Use [move-surface](/cli/surfaces/move) if you need to move a surface to a different pane.
+
+## Output
+
+### Human-readable format
+
+```
+OK surface=surface:2 pane=pane:0 workspace=workspace:1
+```
+
+### JSON format
+
+```json
+{
+  "surface_ref": "surface:2",
+  "pane_ref": "pane:0",
+  "workspace_ref": "workspace:1"
+}
+```
+
+## Examples
+
+```bash
+# Move surface before another surface
+cmux reorder-surface surface:3 --before surface:1
+
+# Move surface after another surface
+cmux reorder-surface surface:0 --after surface:2
+
+# Move surface to specific index
+cmux reorder-surface surface:2 --index 0
+
+# Move surface by index to the end of the list
+cmux reorder-surface 1 --index 5
+
+# Reorder in a specific workspace
+cmux reorder-surface surface:1 --workspace workspace:2 --before surface:3
+```
+
+## Positioning Logic
+
+1. **Before/After**: Use `--before` or `--after` to insert relative to another surface in the same pane
+2. **Index**: Use `--index` to move to a specific position (0-based)
+   - Index 0 = first position
+   - Index beyond the list length = last position
+3. **One option required**: You must specify either `--before`, `--after`, or `--index`
+
+## Notes
+
+- The surface remains in the same pane (does not move across panes)
+- The surface retains its `surface_id` and all state
+- This is purely a visual reordering operation
+- Use [move-surface](/cli/surfaces/move) to move surfaces between different panes
+
+## Related Commands
+
+- [move-surface](/cli/surfaces/move) - Move surface to a different pane
+- [list-panels](/cli/surfaces/list) - List surfaces
+- [list-pane-surfaces](/api/pane/surfaces) - List surfaces in a specific pane
+- [new-surface](/cli/surfaces/create) - Create a new surface

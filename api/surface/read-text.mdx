@@ -1,0 +1,219 @@
+---
+title: surface.read_text
+description: Read text from a terminal surface
+---
+
+Reads the visible text or scrollback history from a terminal surface.
+
+## Method
+
+```
+surface.read_text
+```
+
+## Parameters
+
+<ParamField path="surface_id" type="string">
+  The UUID or reference of the terminal surface to read from. If not provided, reads from the currently focused surface.
+</ParamField>
+
+<ParamField path="workspace_id" type="string">
+  The UUID of the workspace containing the surface. If not provided, uses the currently selected workspace.
+</ParamField>
+
+<ParamField path="scrollback" type="boolean" default="false">
+  Whether to include scrollback history in addition to the visible screen. When `true`, reads all scrollback lines plus the current screen.
+</ParamField>
+
+<ParamField path="lines" type="number">
+  Maximum number of lines to read from the scrollback buffer. Must be greater than 0. Setting this parameter automatically enables `scrollback`.
+</ParamField>
+
+<ParamField path="window_id" type="string">
+  The UUID of the window to target. If not provided, uses the current window.
+</ParamField>
+
+## Response
+
+Returns an object with the terminal text:
+
+<ResponseField name="text" type="string">
+  The decoded text content from the terminal
+</ResponseField>
+
+<ResponseField name="base64" type="string">
+  The base64-encoded text content (useful for binary or special characters)
+</ResponseField>
+
+<ResponseField name="surface_id" type="string">
+  The UUID of the surface that was read
+</ResponseField>
+
+<ResponseField name="surface_ref" type="string">
+  The human-readable reference for the surface
+</ResponseField>
+
+<ResponseField name="workspace_id" type="string">
+  The UUID of the workspace
+</ResponseField>
+
+<ResponseField name="workspace_ref" type="string">
+  The human-readable reference for the workspace
+</ResponseField>
+
+<ResponseField name="window_id" type="string">
+  The UUID of the window
+</ResponseField>
+
+<ResponseField name="window_ref" type="string">
+  The human-readable reference for the window
+</ResponseField>
+
+## Example
+
+<CodeGroup>
+```json Read Visible Screen
+{
+  "id": "1",
+  "method": "surface.read_text",
+  "params": {}
+}
+```
+
+```json Read with Scrollback
+{
+  "id": "2",
+  "method": "surface.read_text",
+  "params": {
+    "scrollback": true
+  }
+}
+```
+
+```json Read Limited Lines
+{
+  "id": "3",
+  "method": "surface.read_text",
+  "params": {
+    "lines": 100
+  }
+}
+```
+
+```json Read Specific Surface
+{
+  "id": "4",
+  "method": "surface.read_text",
+  "params": {
+    "surface_id": "surface:2",
+    "scrollback": true
+  }
+}
+```
+
+```json Response
+{
+  "ok": true,
+  "result": {
+    "text": "$ echo hello\nhello\n$ ",
+    "base64": "JCBlY2hvIGhlbGxvCmhlbGxvCiQg",
+    "surface_id": "770e8400-e29b-41d4-a716-446655440000",
+    "surface_ref": "surface:1",
+    "workspace_id": "550e8400-e29b-41d4-a716-446655440000",
+    "workspace_ref": "workspace:1",
+    "window_id": "660e8400-e29b-41d4-a716-446655440000",
+    "window_ref": "window:1"
+  }
+}
+```
+</CodeGroup>
+
+## CLI Usage
+
+```bash
+# Read visible screen
+cmux read-screen
+
+# Read with scrollback
+cmux read-screen --scrollback
+
+# Read last 100 lines
+cmux read-screen --lines 100
+
+# Read from specific surface
+cmux read-screen --surface surface:2 --scrollback
+```
+
+## Errors
+
+<ResponseField name="not_found" type="error">
+  No focused surface or the specified surface does not exist
+</ResponseField>
+
+<ResponseField name="invalid_params" type="error">
+  - Target surface is not a terminal
+  - `lines` parameter must be greater than 0
+</ResponseField>
+
+<ResponseField name="internal_error" type="error">
+  Failed to read or decode terminal text
+</ResponseField>
+
+## Scrollback Behavior
+
+### Default (scrollback=false)
+
+Reads only the currently visible viewport (what you see on screen).
+
+### With scrollback=true
+
+Reads all scrollback history plus the current screen. This includes:
+- All lines in the scrollback buffer
+- The currently visible screen lines
+- Useful for getting full command history and output
+
+### With lines parameter
+
+Reads the last N lines from the scrollback buffer:
+
+```json
+{
+  "lines": 50  // Read last 50 lines
+}
+```
+
+Setting `lines` automatically enables scrollback mode.
+
+## Use Cases
+
+**Visible screen only**: Testing automation, checking prompt state
+
+```json
+{"method": "surface.read_text", "params": {}}
+```
+
+**Full history**: Log analysis, debugging, command history
+
+```json
+{"method": "surface.read_text", "params": {"scrollback": true}}
+```
+
+**Recent output**: Checking last N lines of output
+
+```json
+{"method": "surface.read_text", "params": {"lines": 100}}
+```
+
+## Notes
+
+- Only works with terminal surfaces, not browser surfaces
+- Text includes ANSI escape codes and formatting
+- The `base64` field is useful for handling special characters
+- Reading does not affect the terminal state or cursor position
+- Equivalent to tmux's `capture-pane` command
+
+## See Also
+
+- [surface.send_text](/api/surface/send-text) - Send text to terminal
+- [surface.send_key](/api/surface/send-key) - Send keys to terminal
+- [surface.list](/api/surface/list) - List available surfaces

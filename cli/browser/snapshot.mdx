@@ -1,0 +1,440 @@
+---
+title: Snapshot Command
+description: Capture accessibility tree snapshots with element refs for LLM-friendly page understanding
+---
+
+## Overview
+
+The `snapshot` command captures a structured, text-based representation of a web page using the accessibility tree. This format is optimized for LLM consumption and includes stable element references.
+
+## Basic Usage
+
+```bash
+cmux browser surface:1 snapshot
+```
+
+**Output:**
+
+```
+@e1 heading "Example Domain"
+@e2 text "This domain is for use in illustrative examples in documents."
+@e3 link "More information..."
+```
+
+## Element References
+
+Each interactive element gets a stable ref (`@e1`, `@e2`, etc.) that can be used in subsequent commands:
+
+```bash
+# Get snapshot
+cmux browser surface:1 snapshot
+# @e1 button "Submit"
+# @e2 link "Cancel"
+# @e3 textbox "Email address"
+
+# Use refs in commands
+cmux browser surface:1 click "@e1"
+cmux browser surface:1 fill "@e3" "user@example.com"
+```
+
+**Benefits:**
+- Stable across page updates (until page reloads)
+- Easier than writing CSS selectors
+- Optimized for LLM agent workflows
+
+## Snapshot Options
+
+### Interactive Elements Only
+
+```bash
+# Default: show all elements
+cmux browser surface:1 snapshot
+
+# Interactive only (clickable, fillable)
+cmux browser surface:1 snapshot --interactive
+cmux browser surface:1 snapshot -i
+```
+
+Interactive elements include:
+- Buttons, links, form controls
+- Elements with click handlers
+- Editable fields
+
+### Cursor Position
+
+Show where keyboard focus is:
+
+```bash
+cmux browser surface:1 snapshot --cursor
+```
+
+**Output:**
+
+```
+@e1 textbox "Username"
+@e2 textbox "Password" <-- cursor
+@e3 button "Sign In"
+```
+
+### Selector Scope
+
+Snapshot a specific element and its children:
+
+```bash
+cmux browser surface:1 snapshot --selector "#main-content"
+cmux browser surface:1 snapshot --selector ".search-results"
+```
+
+**Use case:**
+
+```bash
+# Focus on form only
+cmux browser surface:1 snapshot --selector "form#login"
+# @e1 textbox "Email"
+# @e2 textbox "Password"
+# @e3 button "Submit"
+```
+
+### Max Depth
+
+Limit tree depth to reduce output size:
+
+```bash
+# Limit to 3 levels deep
+cmux browser surface:1 snapshot --max-depth 3
+
+# Shallow snapshot (top-level only)
+cmux browser surface:1 snapshot --max-depth 1
+```
+
+### Compact Mode
+
+Minimize output by removing empty lines and reducing whitespace:
+
+```bash
+cmux browser surface:1 snapshot --compact
+```
+
+## JSON Output
+
+Get structured snapshot data:
+
+```bash
+cmux browser --json surface:1 snapshot
+```
+
+**Response:**
+
+```json
+{
+  "ok": true,
+  "snapshot": "@e1 heading \"Example Domain\"\n@e2 text \"This domain...\"\n@e3 link \"More information...\"",
+  "url": "https://example.com/",
+  "title": "Example Domain",
+  "interactive_count": 1,
+  "total_count": 3
+}
+```
+
+## Snapshot Format
+
+### Element Structure
+
+```
+@eN role "accessible_name" [attributes]
+```
+
+Components:
+- `@eN`: Element reference (e1, e2, e3, ...)
+- `role`: ARIA role (button, link, textbox, heading, etc.)
+- `"name"`: Accessible name (label, text content, or aria-label)
+- `[attributes]`: Additional state (checked, disabled, expanded, etc.)
+
+### Example Snapshot
+
+```
+@e1 heading "Sign In"
+@e2 textbox "Email address"
+@e3 textbox "Password" type=password
+@e4 checkbox "Remember me"
+@e5 button "Sign In"
+@e6 link "Forgot password?"
+@e7 text "Don't have an account?"
+@e8 link "Sign up"
+```
+
+### Roles and Attributes
+
+**Common roles:**
+- `heading`: h1-h6 elements
+- `button`: Buttons and button-like elements
+- `link`: Anchors and links
+- `textbox`: Text inputs, textareas
+- `checkbox`: Checkboxes
+- `radio`: Radio buttons
+- `combobox`: Select dropdowns
+- `list`: Lists (ul, ol)
+- `listitem`: List items
+- `navigation`: Nav elements
+- `main`: Main content area
+- `dialog`: Modal dialogs
+- `alert`: Alert messages
+- `text`: Static text content
+
+**Common attributes:**
+- `checked`: Checkbox/radio state
+- `disabled`: Disabled state
+- `expanded`: Expanded/collapsed state
+- `selected`: Selected state (options, tabs)
+- `level`: Heading level (h1=1, h2=2, ...)
+- `type`: Input type (password, email, etc.)
+- `value`: Current value (for some elements)
+
+## Accessibility Tree
+
+The snapshot is based on the browser's accessibility tree, which:
+
+- Represents page structure semantically
+- Includes ARIA roles and properties
+- Excludes hidden and decorative elements
+- Provides accessible names (labels, text, aria-label)
+- Reflects the page as screen readers see it
+
+**Benefits for automation:**
+- Stable across CSS/layout changes
+- Semantic understanding of elements
+- Better match for user intent
+- Reduced output size vs. full DOM
+
+## Snapshot Workflows
+
+### Navigation with Snapshot
+
+```bash
+# Navigate and snapshot
+cmux browser surface:1 navigate https://example.com --snapshot-after
+
+# Or separate commands
+cmux browser surface:1 navigate https://example.com
+cmux browser surface:1 snapshot
+```
+
+### Interaction Verification
+
+```bash
+# Click with post-snapshot
+cmux browser surface:1 click "#load-more" --snapshot-after
+
+# Verify new content appeared
+# (snapshot includes newly loaded elements)
+```
+
+### Form Discovery
+
+```bash
+# Snapshot form
+cmux browser surface:1 snapshot --selector "form" --interactive
+# @e1 textbox "Username"
+# @e2 textbox "Password"
+# @e3 button "Sign In"
+
+# Fill using refs
+cmux browser surface:1 fill "@e1" "admin"
+cmux browser surface:1 fill "@e2" "secret"
+cmux browser surface:1 click "@e3"
+```
+
+### Progressive Exploration
+
+```bash
+# High-level overview
+cmux browser surface:1 snapshot --max-depth 2
+
+# Drill into section
+cmux browser surface:1 snapshot --selector "#search-results"
+
+# Interactive elements only
+cmux browser surface:1 snapshot --selector "nav" --interactive
+```
+
+### Dynamic Content
+
+```bash
+# Before action
+cmux browser surface:1 snapshot --selector ".list" --compact
+# 3 items
+
+# Trigger load
+cmux browser surface:1 click "#load-more" --snapshot-after
+# 6 items (snapshot shows new elements)
+```
+
+## LLM Agent Patterns
+
+### Task: Fill a Form
+
+```bash
+# 1. Snapshot to understand form
+cmux browser surface:1 snapshot --interactive
+
+# LLM sees:
+# @e1 textbox "Full Name"
+# @e2 textbox "Email"
+# @e3 combobox "Country"
+# @e4 button "Submit"
+
+# 2. Fill based on snapshot
+cmux browser surface:1 fill "@e1" "John Doe"
+cmux browser surface:1 fill "@e2" "john@example.com"
+cmux browser surface:1 select "@e3" "United States"
+cmux browser surface:1 click "@e4" --snapshot-after
+```
+
+### Task: Extract Data
+
+```bash
+# 1. Snapshot to identify structure
+cmux browser surface:1 snapshot --selector ".product-list"
+
+# LLM sees:
+# @e1 heading "Product 1"
+# @e2 text "$19.99"
+# @e3 link "View details"
+# @e4 heading "Product 2"
+# @e5 text "$24.99"
+# @e6 link "View details"
+
+# 2. Extract using eval
+cmux browser surface:1 eval "
+  Array.from(document.querySelectorAll('.product')).map(p => ({
+    name: p.querySelector('h3').textContent,
+    price: p.querySelector('.price').textContent
+  }))
+"
+```
+
+### Task: Navigate Multi-Page Flow
+
+```bash
+# 1. Start page
+cmux browser surface:1 navigate https://app.example.com --snapshot-after
+
+# 2. Use snapshot to find next action
+# LLM sees: @e5 link "Get Started"
+cmux browser surface:1 click "@e5" --snapshot-after
+
+# 3. Continue based on new snapshot
+# LLM sees: @e2 textbox "Email", @e3 button "Continue"
+cmux browser surface:1 fill "@e2" "user@example.com"
+cmux browser surface:1 click "@e3" --snapshot-after
+```
+
+## Comparison: Snapshot vs. Full DOM
+
+### Snapshot (Accessibility Tree)
+
+```
+@e1 heading "Welcome"
+@e2 textbox "Search"
+@e3 button "Go"
+```
+
+**Pros:**
+- Concise, LLM-friendly
+- Semantic structure
+- Stable element refs
+- Filters noise (decorative elements)
+
+**Cons:**
+- Less detail than full DOM
+- May miss some visual-only elements
+
+### Full DOM (HTML)
+
+```html
+<div class="container">
+  <h1 class="title">Welcome</h1>
+  <form class="search-form">
+    <input type="text" placeholder="Search" class="search-input" />
+    <button type="submit" class="search-button">Go</button>
+  </form>
+</div>
+```
+
+**Pros:**
+- Complete structure
+- CSS classes and attributes
+- Exact markup
+
+**Cons:**
+- Verbose (token-heavy)
+- Includes noise
+- No stable refs
+
+## Snapshot Limitations
+
+### Not Included in Snapshot
+
+- Hidden elements (`display: none`, `visibility: hidden`)
+- Decorative elements (images without alt text)
+- Elements with `aria-hidden="true"`
+- CSS-only visual effects
+- Canvas/WebGL content
+- Shadow DOM (unless exposed)
+
+### Getting Excluded Content
+
+If you need hidden or decorative elements:
+
+```bash
+# Use eval to access full DOM
+cmux browser surface:1 eval "document.querySelector('.hidden').innerHTML"
+
+# Or get HTML directly
+cmux browser surface:1 get html ".container"
+```
+
+## Error Handling
+
+### Empty Page
+
+```json
+{
+  "ok": true,
+  "snapshot": "Empty page",
+  "url": "about:blank",
+  "title": ""
+}
+```
+
+### Selector Not Found
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "not_found",
+    "message": "Selector not found: #missing-section",
+    "selector": "#missing-section"
+  }
+}
+```
+
+### Invalid Depth
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "invalid_params",
+    "message": "--max-depth must be a non-negative integer",
+    "provided": "-1"
+  }
+}
+```
+
+## See Also
+
+- [Interaction Commands](/cli/browser/interaction) - Using refs to interact with elements
+- [Automation Commands](/cli/browser/automation) - Find elements semantically
+- [Browser Overview](/cli/browser/overview) - Complete browser API reference

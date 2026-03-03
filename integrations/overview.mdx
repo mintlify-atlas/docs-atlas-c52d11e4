@@ -1,0 +1,115 @@
+---
+title: Agent Integrations Overview
+description: How to integrate cmux notifications with AI coding agents
+---
+
+cmux provides a notification panel for AI agents like Claude Code, Codex, and OpenCode. Notifications appear in a dedicated panel and trigger macOS system notifications.
+
+## Features
+
+- **Notification Panel** - See all pending notifications in one place
+- **Visual Indicators** - Panes get blue rings and tabs light up when agents need attention
+- **CLI & API** - Send notifications via `cmux notify` command or terminal sequences
+- **Automatic Detection** - Agents can detect cmux availability and fallback to system notifications
+
+## Quick Start
+
+<CodeGroup>
+```bash Shell
+# Send a notification (if cmux is available)
+command -v cmux &>/dev/null && cmux notify --title "Done" --body "Task complete"
+
+# With fallback to macOS notifications
+command -v cmux &>/dev/null && cmux notify --title "Done" --body "Task complete" || osascript -e 'display notification "Task complete" with title "Done"'
+```
+
+```python Python
+import shutil
+import subprocess
+
+def notify(title: str, body: str = ""):
+    if shutil.which("cmux"):
+        subprocess.run(["cmux", "notify", "--title", title, "--body", body])
+    else:
+        # Fallback to macOS
+        subprocess.run(["osascript", "-e", f'display notification "{body}" with title "{title}"'])
+```
+</CodeGroup>
+
+## Detection Patterns
+
+Always check if `cmux` CLI is available before using it:
+
+<CodeGroup>
+```bash Shell One-liner
+# One-liner with fallback
+command -v cmux &>/dev/null && cmux notify --title "Hello" || osascript -e 'display notification "" with title "Hello"'
+```
+
+```bash Shell Conditional
+# Shell conditional
+if command -v cmux &>/dev/null; then
+    cmux notify --title "Hello"
+fi
+```
+
+```python Python
+import shutil
+
+if shutil.which("cmux"):
+    # cmux is available
+    pass
+```
+</CodeGroup>
+
+## Environment Variables
+
+cmux sets these environment variables in child shells:
+
+| Variable | Description |
+|----------|-------------|
+| `CMUX_SOCKET_PATH` | Path to control socket |
+| `CMUX_TAB_ID` | UUID of the current tab |
+| `CMUX_PANEL_ID` | UUID of the current panel |
+
+## CLI Usage
+
+```bash
+# Simple notification
+cmux notify --title "Build Complete"
+
+# With subtitle and body
+cmux notify --title "Claude Code" --subtitle "Permission" --body "Approval needed"
+
+# Notify specific tab/panel
+cmux notify --title "Done" --tab 0 --panel 1
+```
+
+## Available Commands
+
+```bash
+cmux notify --title <text> [--subtitle <text>] [--body <text>] [--tab <id|index>] [--panel <id|index>]
+cmux list-notifications
+cmux clear-notifications
+cmux ping
+```
+
+## Best Practices
+
+1. **Always check availability first** - Use `command -v cmux` before calling
+2. **Provide fallbacks** - Use `|| osascript` for macOS fallback
+3. **Keep notifications concise** - Title should be brief, use body for details
+
+## Integration Guides
+
+<CardGroup cols={3}>
+  <Card title="Claude Code" icon="robot" href="./claude-code">
+    Configure hooks for idle and permission prompts
+  </Card>
+  <Card title="OpenCode" icon="code" href="./opencode">
+    Set up plugin for session events
+  </Card>
+  <Card title="Codex" icon="terminal" href="./codex">
+    Configure notify command for turn completion
+  </Card>
+</CardGroup>

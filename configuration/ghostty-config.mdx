@@ -1,0 +1,185 @@
+---
+title: Ghostty Config Compatibility
+description: How cmux reads and applies your Ghostty configuration for themes, fonts, and colors
+---
+
+cmux reads your existing Ghostty configuration files to provide a seamless transition. You can use the same themes, fonts, and color schemes you've already configured for Ghostty.
+
+## Config File Locations
+
+cmux searches for Ghostty config files in the following order (matching Ghostty's macOS defaults):
+
+1. `~/.config/ghostty/config`
+2. `~/.config/ghostty/config.ghostty`
+3. `~/Library/Application Support/com.mitchellh.ghostty/config`
+4. `~/Library/Application Support/com.mitchellh.ghostty/config.ghostty`
+
+All discovered config files are parsed and merged. Later files override earlier settings.
+
+## Supported Settings
+
+### Font Configuration
+
+```bash
+font-family = "JetBrains Mono"
+font-size = 14
+```
+
+- `font-family` — Terminal font family (default: `Menlo`)
+- `font-size` — Font size in points (default: `12`)
+
+### Theme Selection
+
+```bash
+theme = "Monokai Pro"
+# or adaptive themes
+theme = "light:Solarized Light,dark:Monokai Pro"
+```
+
+The `theme` directive loads a theme file from Ghostty's theme search paths. cmux supports:
+
+- **Simple themes**: `theme = "Tokyo Night"`
+- **Adaptive themes**: `theme = "light:Solarized Light,dark:Monokai Pro"`
+- **Builtin prefix**: `theme = "builtin Solarized Light"` or `theme = "Monokai Pro (builtin)"`
+
+#### Theme Search Paths
+
+cmux searches for theme files in:
+
+1. `$GHOSTTY_RESOURCES_DIR/themes/<name>` (if set)
+2. `<cmux.app>/Contents/Resources/ghostty/themes/<name>`
+3. `$XDG_DATA_DIRS/ghostty/themes/<name>` (each directory in the colon-separated list)
+4. `/Applications/Ghostty.app/Contents/Resources/ghostty/themes/<name>`
+5. `~/.config/ghostty/themes/<name>`
+6. `~/Library/Application Support/com.mitchellh.ghostty/themes/<name>`
+
+#### Adaptive Theme Resolution
+
+When you specify multiple themes with `light:` and `dark:` prefixes, cmux selects the appropriate theme based on macOS system appearance:
+
+```bash
+# Uses "Solarized Light" in light mode, "Monokai Pro" in dark mode
+theme = "light:Solarized Light,dark:Monokai Pro"
+```
+
+If no prefix matches the current appearance, cmux falls back to the first unprefixed theme in the list.
+
+### Color Overrides
+
+You can override individual colors directly in the config:
+
+```bash
+background = "#272822"
+background-opacity = 0.95
+foreground = "#fdfff1"
+cursor-color = "#c0c1b5"
+cursor-text = "#8d8e82"
+selection-background = "#57584f"
+selection-foreground = "#fdfff1"
+```
+
+Colors must be hex values (e.g., `#RRGGBB`).
+
+### Palette Colors
+
+Define ANSI palette colors (0–15):
+
+```bash
+palette = 0=#272822
+palette = 1=#f92672
+palette = 2=#a6e22e
+# ... etc
+```
+
+### Working Directory
+
+```bash
+working-directory = "~/projects"
+```
+
+Sets the default working directory for new terminals.
+
+### Scrollback Limit
+
+```bash
+scrollback-limit = 10000
+```
+
+Number of lines to keep in scrollback history (default: `10000`).
+
+### Split Appearance
+
+```bash
+unfocused-split-opacity = 0.7
+unfocused-split-fill = "#1a1a1a"
+split-divider-color = "#3a3a3a"
+```
+
+- `unfocused-split-opacity` — Opacity of unfocused splits (default: `0.7`)
+- `unfocused-split-fill` — Fill color for unfocused splits (default: background color)
+- `split-divider-color` — Color of split dividers (default: auto-calculated from background)
+
+## Environment Variables
+
+### GHOSTTY_RESOURCES_DIR
+
+Override the theme and resource search path:
+
+```bash
+export GHOSTTY_RESOURCES_DIR="/path/to/custom/ghostty/resources"
+```
+
+cmux will search `$GHOSTTY_RESOURCES_DIR/themes/` before other locations.
+
+### XDG_DATA_DIRS
+
+Add custom data directories for theme discovery:
+
+```bash
+export XDG_DATA_DIRS="/usr/local/share:/usr/share"
+```
+
+cmux searches `<dir>/ghostty/themes/` for each directory in the list.
+
+## Reload Configuration
+
+Reload the Ghostty config without restarting cmux:
+
+- **Menu**: `cmux → Reload Configuration`
+- **Keyboard**: `Cmd+Shift+,`
+
+This re-parses all config files and reapplies themes and colors to open terminals.
+
+## Compatibility Notes
+
+cmux implements a **subset** of Ghostty's configuration. The following are currently supported:
+
+- Font family, size
+- Themes (with adaptive light/dark support)
+- Background, foreground, cursor, selection colors
+- ANSI palette (colors 0–15)
+- Working directory
+- Scrollback limit
+- Split appearance settings
+
+Other Ghostty config keys (keybinds, shell integration, mouse settings, etc.) are not yet parsed by cmux.
+
+## Example Config
+
+```bash
+# ~/.config/ghostty/config
+font-family = "JetBrains Mono"
+font-size = 14
+theme = "light:Solarized Light,dark:Monokai Pro"
+working-directory = "~/projects"
+scrollback-limit = 20000
+unfocused-split-opacity = 0.8
+```
+
+This config:
+
+- Uses JetBrains Mono at 14pt
+- Switches themes based on system appearance
+- Opens new terminals in `~/projects`
+- Keeps 20,000 lines of scrollback
+- Sets unfocused splits to 80% opacity

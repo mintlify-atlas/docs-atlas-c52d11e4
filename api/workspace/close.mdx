@@ -1,0 +1,131 @@
+---
+title: workspace.close
+description: Close a workspace and all its surfaces
+---
+
+## Overview
+
+Closes the specified workspace, removing it from the window and terminating all surfaces (terminals, browsers) within it.
+
+## Method
+
+```
+workspace.close
+```
+
+## Parameters
+
+<ParamField path="workspace_id" type="string" required>
+  Workspace identifier (UUID or ref)
+</ParamField>
+
+<ParamField path="window_id" type="string" optional>
+  Window identifier (UUID or ref). If omitted, the workspace's window is determined automatically.
+</ParamField>
+
+## Response
+
+<ResponseField name="window_id" type="string">
+  UUID of the window that contained the workspace
+</ResponseField>
+
+<ResponseField name="window_ref" type="string">
+  Short reference for the window
+</ResponseField>
+
+<ResponseField name="workspace_id" type="string">
+  UUID of the closed workspace
+</ResponseField>
+
+<ResponseField name="workspace_ref" type="string">
+  Short reference for the closed workspace
+</ResponseField>
+
+## Error Codes
+
+<ResponseField name="unavailable" type="error">
+  TabManager not available
+</ResponseField>
+
+<ResponseField name="invalid_params" type="error">
+  Missing or invalid `workspace_id`
+</ResponseField>
+
+<ResponseField name="not_found" type="error">
+  Workspace not found
+</ResponseField>
+
+## Behavior
+
+- All surfaces (terminals, browsers) in the workspace are terminated
+- If this is the last workspace in the window, a new workspace is created automatically
+- Pinned workspaces can be closed (unlike pinned tabs within a workspace)
+- Workspace selection may shift to an adjacent workspace
+
+## Example
+
+### Close by reference
+
+```bash
+cmux close-workspace --workspace ws2
+```
+
+### Close by UUID
+
+```bash
+cmux close-workspace --workspace 650e8400-e29b-41d4-a716-446655440002
+```
+
+## Socket API
+
+```json
+{
+  "id": "req-1",
+  "method": "workspace.close",
+  "params": {
+    "workspace_id": "650e8400-e29b-41d4-a716-446655440002"
+  }
+}
+```
+
+### Response
+
+```json
+{
+  "ok": true,
+  "result": {
+    "window_id": "550e8400-e29b-41d4-a716-446655440000",
+    "window_ref": "w1",
+    "workspace_id": "650e8400-e29b-41d4-a716-446655440002",
+    "workspace_ref": "ws2"
+  }
+}
+```
+
+## Bulk Close Operations
+
+Use `workspace.action` for bulk operations:
+
+- `close_others` - Close all other workspaces (except pinned)
+- `close_above` - Close all workspaces above the target
+- `close_below` - Close all workspaces below the target
+
+```bash
+cmux workspace-action --workspace ws3 close_others
+```
+
+## Related Methods
+
+- `workspace.action` - Bulk close operations
+- `surface.close` - Close individual surfaces within a workspace
+- `window.close` - Close entire window (all workspaces)
+
+## Implementation
+
+Source: `Sources/TerminalController.swift:2457`
+
+- Delegates to `TabManager.closeWorkspace(_:)`
+- Thread-safe via `v2MainSync`
+- Sentry telemetry logged for close operations
+
+Source: `Sources/TabManager.swift:978`

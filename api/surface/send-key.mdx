@@ -1,0 +1,198 @@
+---
+title: surface.send_key
+description: Send special keys or key combinations to a terminal
+---
+
+Sends special keys or key combinations to a terminal surface, such as Ctrl+C, Enter, Escape, etc.
+
+## Method
+
+```
+surface.send_key
+```
+
+## Parameters
+
+<ParamField path="key" type="string" required>
+  The key or key combination to send. See [Supported Keys](#supported-keys) below.
+</ParamField>
+
+<ParamField path="surface_id" type="string">
+  The UUID or reference of the terminal surface. If not provided, sends to the currently focused surface.
+</ParamField>
+
+<ParamField path="workspace_id" type="string">
+  The UUID of the workspace containing the surface. If not provided, uses the currently selected workspace.
+</ParamField>
+
+<ParamField path="window_id" type="string">
+  The UUID of the window to target. If not provided, uses the current window.
+</ParamField>
+
+## Supported Keys
+
+### Signal Keys
+
+- `ctrl-c`, `ctrl+c`, `sigint` - Send interrupt signal (Ctrl+C)
+- `ctrl-d`, `ctrl+d`, `eof` - Send EOF (Ctrl+D)
+- `ctrl-z`, `ctrl+z`, `sigtstp` - Send suspend signal (Ctrl+Z)
+- `ctrl-\`, `ctrl+\`, `sigquit` - Send quit signal (Ctrl+\)
+
+### Control Keys
+
+- `ctrl-<letter>` or `ctrl+<letter>` - Any Ctrl+letter combination (e.g., `ctrl-a`, `ctrl-x`)
+
+### Special Keys
+
+- `enter`, `return` - Enter/Return key
+- `tab` - Tab key
+- `escape`, `esc` - Escape key
+- `backspace` - Backspace key
+
+## Response
+
+Returns an object confirming the key was sent:
+
+<ResponseField name="surface_id" type="string">
+  The UUID of the surface that received the key
+</ResponseField>
+
+<ResponseField name="surface_ref" type="string">
+  The human-readable reference for the surface
+</ResponseField>
+
+<ResponseField name="workspace_id" type="string">
+  The UUID of the workspace
+</ResponseField>
+
+<ResponseField name="workspace_ref" type="string">
+  The human-readable reference for the workspace
+</ResponseField>
+
+<ResponseField name="window_id" type="string">
+  The UUID of the window
+</ResponseField>
+
+<ResponseField name="window_ref" type="string">
+  The human-readable reference for the window
+</ResponseField>
+
+## Example
+
+<CodeGroup>
+```json Send Ctrl+C
+{
+  "id": "1",
+  "method": "surface.send_key",
+  "params": {
+    "key": "ctrl-c"
+  }
+}
+```
+
+```json Send Enter
+{
+  "id": "2",
+  "method": "surface.send_key",
+  "params": {
+    "key": "enter"
+  }
+}
+```
+
+```json Send to Specific Surface
+{
+  "id": "3",
+  "method": "surface.send_key",
+  "params": {
+    "surface_id": "surface:2",
+    "key": "ctrl-d"
+  }
+}
+```
+
+```json Response
+{
+  "ok": true,
+  "result": {
+    "surface_id": "770e8400-e29b-41d4-a716-446655440000",
+    "surface_ref": "surface:1",
+    "workspace_id": "550e8400-e29b-41d4-a716-446655440000",
+    "workspace_ref": "workspace:1",
+    "window_id": "660e8400-e29b-41d4-a716-446655440000",
+    "window_ref": "window:1"
+  }
+}
+```
+</CodeGroup>
+
+## CLI Usage
+
+```bash
+# Send Ctrl+C to focused surface
+cmux send-key ctrl-c
+
+# Send Enter key
+cmux send-key enter
+
+# Send to specific surface
+cmux send-key --surface surface:2 -- ctrl-d
+
+# Legacy alias
+cmux send-key-panel --panel surface:1 -- escape
+```
+
+## Errors
+
+<ResponseField name="not_found" type="error">
+  No focused surface or the specified surface does not exist
+</ResponseField>
+
+<ResponseField name="invalid_params" type="error">
+  - Missing `key` parameter
+  - Unknown key name
+  - Target surface is not a terminal
+  - Surface not ready
+</ResponseField>
+
+## Key Code Reference
+
+Common use cases:
+
+```bash
+# Interrupt a running process
+ctrl-c, ctrl+c, sigint
+
+# Exit a shell or program
+ctrl-d, ctrl+d, eof
+
+# Submit a command
+enter, return
+
+# Exit vim insert mode
+escape, esc
+
+# Suspend a process
+ctrl-z, ctrl+z, sigtstp
+
+# Navigation in terminal
+ctrl-a  # Start of line
+ctrl-e  # End of line
+ctrl-u  # Clear line
+ctrl-w  # Delete word
+```
+
+## Notes
+
+- Only works with terminal surfaces, not browser surfaces
+- The surface must be ready (attached to the terminal) to send keys
+- Key names are case-insensitive
+- Both `ctrl-` and `ctrl+` syntax are supported
+- The terminal view is automatically refreshed after sending a key
+- For sending text, use [surface.send_text](/api/surface/send-text) instead
+
+## See Also
+
+- [surface.send_text](/api/surface/send-text) - Send regular text input
+- [surface.read_text](/api/surface/read-text) - Read terminal output
+- [surface.focus](/api/surface/focus) - Focus a surface before sending keys
